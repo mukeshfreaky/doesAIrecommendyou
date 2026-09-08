@@ -1,9 +1,12 @@
+// Core domain types for Does AI Recommend You? (Phase 1)
+
 export type RecommendationPosture =
   | "TOP_RECOMMENDATION"
   | "RECOMMENDED"
   | "CONSIDERED"
   | "MENTIONED"
-  | "NOT_MENTIONED";
+  | "NOT_MENTIONED"
+  | "AMBIGUOUS";
 
 export type IntentCategory =
   | "CATEGORY_DISCOVERY"
@@ -20,22 +23,34 @@ export type IntentCategory =
 
 export interface BuyerQuestion {
   id: string;
-  intent: IntentCategory;
+  category: IntentCategory;
   question: string;
   rationale: string;
 }
 
-export interface WebsiteEvidence {
+export interface CrawledPage {
   url: string;
-  normalizedDomain: string;
-  brandName: string;
-  brandAliases: string[];
   title: string;
-  metaDescription: string;
+  description: string;
   headings: string[];
-  productSummary: string;
-  detectedCompetitors: string[];
-  categoryKeywords: string[];
+  text: string;
+  links: string[];
+  fetchedAt: string;
+}
+
+export interface BusinessProfile {
+  name: string;
+  domain: string;
+  description: string;
+  productsOrServices: string[];
+  targetCustomers: string[];
+  industries: string[];
+  pricingSignals: string[];
+  keyFeatures: string[];
+  useCases: string[];
+  locations: string[];
+  differentiators: string[];
+  sourcePages: string[];
 }
 
 export type CitationCategory =
@@ -60,56 +75,87 @@ export interface Citation {
 
 export interface CompetitorMention {
   name: string;
-  rank: number;
+  rank?: number;
   posture: RecommendationPosture;
   frequency: number;
   supportingCitations: string[];
 }
 
-export interface QuestionAnalysis {
-  question: BuyerQuestion;
+export interface QuestionResult {
+  questionId: string;
+  category: IntentCategory;
+  question: string;
+  rationale: string;
   rawAIResponse: string;
   posture: RecommendationPosture;
-  brandPosition?: number;
+  brandRank?: number;
+  recommendationReason: string;
   competitors: CompetitorMention[];
-  citations: Citation[];
-  observedEvidence: string[];
-  inferences: string[];
+  citedSources: Citation[];
+  supportingEvidence: string[];
+  searchQueries: string[];
 }
 
 export interface VisibilityScoreBreakdown {
-  overallScore: number;
-  recommendationRate: number;
-  topRecommendationRate: number;
-  considerationRate: number;
-  crossProviderConsistency: number;
-  supportingCitationCount: number;
+  overallScore: number; // 0 - 100
+  recommendationRate: number; // 0 - 100%
+  topRecommendationRate: number; // 0 - 100%
+  considerationRate: number; // 0 - 100%
+  crossProviderConsistency?: number; // 0 - 100%
+  supportingCitationCount?: number;
   totalQuestionsEvaluated: number;
 }
-
-export type ActionPriority = "HIGH" | "MEDIUM" | "LOW";
-
-export interface PrescriptiveAction {
+export interface ActionItem {
   id: string;
+  category:
+    | "CONTENT_GAP"
+    | "CITATION_SOURCE"
+    | "COMPETITOR_DIFFERENTIATION"
+    | "SCHEMA_METADATA"
+    | "AUTHORITY_BUILDING";
+  priority: "HIGH" | "MEDIUM" | "LOW";
   title: string;
-  priority: ActionPriority;
-  observedEvidence: string;
-  inference: string;
-  recommendedAction: string;
+  description: string;
   expectedImpact: string;
+  rationale: string;
+}
+
+
+export interface ProviderMetadata {
+  providerId: string;
+  modelId: string;
+  searchGroundingEnabled: boolean;
+  searchQueriesExecuted: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  estimatedCostUSD: number;
+  latencyMs: number;
 }
 
 export interface ScanReport {
-  id: string;
-  targetUrl: string;
-  brandName: string;
-  timestamp: string;
-  provider: string;
-  model: string;
+  scanId: string;
+  domain: string;
+  businessProfile: BusinessProfile;
+  questions: BuyerQuestion[];
+  questionResults: QuestionResult[];
+  competitors: CompetitorMention[];
   score: VisibilityScoreBreakdown;
-  questionAnalyses: QuestionAnalysis[];
-  topCompetitors: CompetitorMention[];
-  citations: Citation[];
-  prescriptiveActions: PrescriptiveAction[];
-  executionCostUSD: number;
+  actionItems: ActionItem[];
+  evidence: {
+    crawledPagesCount: number;
+    sourcePages: string[];
+  };
+  providerMetadata: ProviderMetadata;
+  generatedAt: string;
 }
+
+export type ScanErrorCode =
+  | "INVALID_URL"
+  | "SSRF_BLOCKED"
+  | "FETCH_FAILED"
+  | "NO_BUSINESS_CONTENT"
+  | "PROVIDER_ERROR"
+  | "GROUNDING_ERROR"
+  | "CLASSIFICATION_ERROR"
+  | "RATE_LIMIT_EXCEEDED"
+  | "INTERNAL_ERROR";

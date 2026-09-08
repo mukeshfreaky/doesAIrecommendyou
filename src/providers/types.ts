@@ -1,4 +1,4 @@
-import { Citation } from "@/types";
+import { Citation, ProviderMetadata } from "@/types";
 
 export interface TokenUsage {
   promptTokens: number;
@@ -9,26 +9,41 @@ export interface TokenUsage {
 export interface ProviderOptions {
   temperature?: number;
   enableSearchGrounding?: boolean;
-  maxTokens?: number;
+  maxOutputTokens?: number;
+}
+
+export interface RawGroundingChunk {
+  uri?: string;
+  title?: string;
+}
+
+export interface RawGroundingMetadata {
+  webSearchQueries?: string[];
+  groundingChunks?: Array<{ web?: RawGroundingChunk }>;
+  groundingSupports?: Array<{
+    groundingChunkIndices?: number[];
+    segment?: { text?: string };
+  }>;
 }
 
 export interface AIResponse {
   content: string;
   citations: Citation[];
   groundingQueries: string[];
+  rawGroundingMetadata?: RawGroundingMetadata;
   tokenUsage?: TokenUsage;
   estimatedCostUSD: number;
-  providerId: string;
-  modelId: string;
-  timestamp: string;
+  metadata: ProviderMetadata;
 }
 
 export interface AIProvider {
-  id: string;
-  name: string;
+  readonly id: string;
+  readonly name: string;
+  readonly modelId: string;
   isConfigured(): boolean;
   generateResponse(
     prompt: string,
+    systemInstruction?: string,
     options?: ProviderOptions
   ): Promise<AIResponse>;
 }
