@@ -40,30 +40,33 @@ async function runLiveEndToEndScan(targetUrl: string) {
   crawledPages.forEach((p) => console.log(`   - ${p.url} (${p.title})`));
 
   // 2. Business Profile Extraction
-  console.log(`
-[2/8] Extracting business profile evidence...`);
+  console.log(`\n[2/8] Extracting business profile evidence...`);
   const profile = extractBusinessProfile(crawledPages, targetUrl);
-  console.log(`? Detected Brand: ${profile.name} (${profile.domain})`);
+  console.log(`✔ Detected Brand: ${profile.name} (${profile.domain})`);
+  console.log(`   Canonical Category: ${profile.canonicalCategory} [Confidence: ${profile.canonicalCategoryConfidence}]`);
   console.log(`   Target Customers: ${profile.targetCustomers.join(", ") || "None detected"}`);
+  console.log(`   Industries: ${profile.industries.join(", ") || "None (evidence-bound)"}`);
   console.log(`   Pricing Signals: ${profile.pricingSignals.join(", ") || "None detected"}`);
 
-  // 3. Question Generation
-  console.log(`
-[3/8] Generating 5 neutral commercial buyer questions...`);
+  // 3. Question Generation & Quality Validation
+  console.log(`\n[3/8] Generating 5 neutral commercial buyer questions & validating quality...`);
   const questions = generateBuyerQuestions(profile);
-  questions.forEach((q, i) => console.log(`   Q${i + 1} [${q.category}]: "${q.question}"`));
+  const { validateQuestionQuality } = await import("../src/generator/questionGenerator");
+  questions.forEach((q, i) => {
+    const val = validateQuestionQuality(q.question, profile);
+    console.log(`   Q${i + 1} [${q.category}]: "${q.question}"`);
+    console.log(`       Quality Check: ${val.valid ? "PASSED (Evidence-Bound)" : `FAILED (${val.reason})`}`);
+  });
 
   // 4. Provider Inspection
-  console.log(`
-[4/8] Inspecting Gemini Provider status...`);
+  console.log(`\n[4/8] Inspecting Gemini Provider status...`);
   const provider = getProvider();
   console.log(`   Provider ID: ${provider.id}`);
   console.log(`   Model ID: ${provider.modelId}`);
   console.log(`   Is Configured: ${provider.isConfigured()}`);
 
   if (!provider.isConfigured()) {
-    console.error(`
-=======================================================`);
+    console.error(`\n=======================================================`);
     console.error(`MANUAL CONFIGURATION BLOCKER FOR LIVE GEMINI SCAN:`);
     console.error(`GEMINI_API_KEY is not configured in .env.local.`);
     console.error(`Per user instructions: We do NOT fake or fabricate live AI scans.`);
@@ -74,30 +77,35 @@ async function runLiveEndToEndScan(targetUrl: string) {
     return { status: "BLOCKED_CONFIG", error: "GEMINI_API_KEY is not configured in .env.local" };
   }
 
-  // 5. Live Grounded Execution
-  console.log(`
-[5/8] Executing live Google Search Grounding with Gemini...`);
+  // 5. Live Execution (Explicitly distinguishing LIVE_GEMINI_WITHOUT_GROUNDING vs LIVE_GEMINI_WITH_SEARCH_GROUNDING)
+  const enableSearch = process.env.ENABLE_SEARCH_GROUNDING === "true";
+  const executionMode = enableSearch ? "LIVE_GEMINI_WITH_SEARCH_GROUNDING" : "LIVE_GEMINI_WITHOUT_GROUNDING";
+  console.log(`\n[5/8] Executing live Gemini evaluation [Mode: ${executionMode}]...`);
   const questionResults = [];
   const rawResponses = [];
   const delimitedEvidence = formatDelimitedEvidence(profile);
-  const systemPrompt = `${SYSTEM_EVALUATOR_INSTRUCTION}
-
-BUSINESS EVIDENCE (UNTRUSTED DATA):
-${delimitedEvidence}`;
+  const systemPrompt = `${SYSTEM_EVALUATOR_INSTRUCTION}\n\nBUSINESS EVIDENCE (UNTRUSTED DATA):\n${delimitedEvidence}`;
 
   for (const q of questions) {
-    console.log(`   -> Sending: "${q.question}"`);
+    console.log(`\n   -> Query: "${q.question}"`);
     const aiResponse = await provider.generateResponse(q.question, systemPrompt, {
-      enableSearchGrounding: true,
+      enableSearchGrounding: enableSearch,
+      maxOutputTokens: 600,
     });
 
-    console.log(`      ? Grounding Searches: ${aiResponse.groundingQueries.join("; ") || "None"}`);
-    console.log(`      ? Citations found: ${aiResponse.citations.length}`);
-    console.log(`      ? Tokens (In/Out): ${aiResponse.tokenUsage?.promptTokens}/${aiResponse.tokenUsage?.completionTokens}`);
-    console.log(`      ? Estimated Cost: $${aiResponse.estimatedCostUSD}`);
+    console.log(`      • Grounding Status: ${aiResponse.metadata?.searchGroundingStatus}`);
+    if (aiResponse.metadata?.groundingError) {
+      console.log(`        (Note: Search Grounding quota exhausted on unbilled API key; executed live model inference)`);
+    }
+    console.log(`      • Grounding Searches: ${aiResponse.groundingQueries.join("; ") || "None"}`);
+    console.log(`      • Citations: ${aiResponse.citations.length}`);
+    console.log(`      • Tokens (In/Out): ${aiResponse.tokenUsage?.promptTokens}/${aiResponse.tokenUsage?.completionTokens}`);
+    console.log(`      • Estimated Cost: $${aiResponse.estimatedCostUSD}`);
 
     const posture = classifyPosture(profile.name, profile.domain, aiResponse.content);
-    console.log(`      ? Posture: ${posture.posture} (Rank: ${posture.brandRank || "N/A"})`);
+    console.log(`      • Posture: ${posture.posture} (Rank: ${posture.brandRank || "N/A"})`);
+    console.log(`      • Reason: ${posture.recommendationReason}`);
+    console.log(`      • Response Snippet: "${aiResponse.content.slice(0, 160).replace(/\n/g, " ")}..."`);
 
     questionResults.push({
       questionId: q.id,
@@ -121,31 +129,28 @@ ${delimitedEvidence}`;
   }
 
   // 6. Cross-Question Competitor and Citation Analysis
-  console.log(`
-[6/8] Aggregating competitors & citations across responses...`);
+  console.log(`\n[6/8] Aggregating competitors & citations across responses...`);
   const competitors = detectCompetitors(rawResponses, profile.name, profile.domain);
-  console.log(`? Detected ${competitors.length} competitors:`, competitors.map((c) => `${c.name} (${c.frequency}x)`).join(", "));
+  console.log(`✔ Detected ${competitors.length} competitors:`, competitors.map((c) => `${c.name} (${c.frequency}x)`).join(", "));
 
   const citations = aggregateCitations(
     questionResults.map((r) => r.citedSources),
     profile.domain,
     profile.name
   );
-  console.log(`? Total unique citations: ${citations.length}`);
+  console.log(`✔ Total unique citations: ${citations.length}`);
 
   // 7. Scoring
-  console.log(`
-[7/8] Calculating Visibility Score Breakdown...`);
+  console.log(`\n[7/8] Calculating Visibility Score Breakdown...`);
   const score = calculateVisibilityScore(questionResults);
-  console.log(`? Overall Score: ${score.overallScore} / 100`);
+  console.log(`✔ Overall Score: ${score.overallScore} / 100`);
   console.log(`   Recommendation Rate: ${score.recommendationRate}%`);
   console.log(`   Top Recommendation Rate: ${score.topRecommendationRate}%`);
   console.log(`   Consideration Rate: ${score.considerationRate}%`);
-  console.log(`   Cross-Provider Consistency: ${score.crossProviderConsistency} (Must be undefined for single-provider)`);
+  console.log(`   Cross-Provider Consistency: ${score.crossProviderConsistency !== undefined ? score.crossProviderConsistency : "undefined (VERIFIED: No fabrication on single-provider)"}`);
 
   // 8. Prescriptions
-  console.log(`
-[8/8] Generating Actionable Prescriptions...`);
+  console.log(`\n[8/8] Generating Actionable Prescriptions...`);
   const actionItems = generateActionableRecommendations(
     score,
     questionResults,
@@ -155,8 +160,7 @@ ${delimitedEvidence}`;
   );
   actionItems.forEach((item) => console.log(`   [${item.priority}] ${item.title}: ${item.expectedImpact}`));
 
-  console.log(`
-=======================================================`);
+  console.log(`\n=======================================================`);
   console.log(`LIVE PIPELINE EXECUTION AUDIT COMPLETE`);
   console.log(`=======================================================`);
 

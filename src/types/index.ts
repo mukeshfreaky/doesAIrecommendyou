@@ -41,6 +41,8 @@ export interface CrawledPage {
 export interface BusinessProfile {
   name: string;
   domain: string;
+  canonicalCategory: string;
+  canonicalCategoryConfidence: "HIGH" | "MEDIUM" | "LOW";
   description: string;
   productsOrServices: string[];
   targetCustomers: string[];
@@ -125,6 +127,8 @@ export interface ProviderMetadata {
   providerId: string;
   modelId: string;
   searchGroundingEnabled: boolean;
+  searchGroundingStatus: "GROUNDED" | "UNGROUNDED" | "QUOTA_EXHAUSTED" | "ERROR";
+  groundingError?: string;
   searchQueriesExecuted: number;
   inputTokens?: number;
   outputTokens?: number;

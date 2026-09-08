@@ -125,6 +125,7 @@ describe("Complete Vertical Pipeline Integration", () => {
         providerId: mockProvider.id,
         modelId: mockProvider.modelId,
         searchGroundingEnabled: true,
+        searchGroundingStatus: "GROUNDED",
         searchQueriesExecuted: 10,
         estimatedCostUSD: 0.35,
         latencyMs: 500,

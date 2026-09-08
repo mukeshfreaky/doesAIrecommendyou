@@ -18,6 +18,8 @@ describe("12-Hour Domain Cooldown & Storage", () => {
     businessProfile: {
       name: "Stripe",
       domain: "stripe.com",
+      canonicalCategory: "Payment Processing & Financial Infrastructure",
+      canonicalCategoryConfidence: "HIGH",
       description: "Financial infrastructure for the internet",
       productsOrServices: ["Payment Processing"],
       targetCustomers: ["Developers", "Enterprises"],
@@ -46,8 +48,9 @@ describe("12-Hour Domain Cooldown & Storage", () => {
     },
     providerMetadata: {
       providerId: "google_gemini",
-      modelId: "gemini-2.5-flash",
+      modelId: "gemini-3.8-flash",
       searchGroundingEnabled: true,
+      searchGroundingStatus: "GROUNDED",
       searchQueriesExecuted: 5,
       estimatedCostUSD: 0.175,
       latencyMs: 1200,

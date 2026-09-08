@@ -4,6 +4,7 @@ import {
   sanitizeEvidenceText,
   formatDelimitedEvidence,
   SYSTEM_EVALUATOR_INSTRUCTION,
+  validateQuestionQuality,
 } from "../src/generator/questionGenerator";
 import { BusinessProfile } from "../src/types";
 
@@ -11,6 +12,8 @@ describe("Buyer Question Generator & Prompt Injection Defense", () => {
   const sampleProfile: BusinessProfile = {
     name: "DocuSigner",
     domain: "docusigner.com",
+    canonicalCategory: "Electronic Signature Software",
+    canonicalCategoryConfidence: "HIGH",
     description: "Cloud electronic signature platform for legal and sales teams.",
     productsOrServices: ["e-signature software"],
     targetCustomers: ["legal and sales teams"],
@@ -91,4 +94,34 @@ describe("Buyer Question Generator & Prompt Injection Defense", () => {
     expect(SYSTEM_EVALUATOR_INSTRUCTION).toContain("SOLE AUTHORITY");
     expect(SYSTEM_EVALUATOR_INSTRUCTION).toContain("IMMUTABLE CRITERIA");
   });
+
+  it("validates all generated questions pass validateQuestionQuality", () => {
+    const questions = generateBuyerQuestions(sampleProfile);
+    for (const q of questions) {
+      const res = validateQuestionQuality(q.question, sampleProfile);
+      expect(res.valid).toBe(true);
+    }
+  });
+
+  it("rejects leading brand-biased questions", () => {
+    const biased = "Why is DocuSigner the best electronic signature platform?";
+    const res = validateQuestionQuality(biased, sampleProfile);
+    expect(res.valid).toBe(false);
+    expect(res.reason).toContain("leading or biased");
+  });
+
+  it("rejects questions containing contaminated phrases", () => {
+    const contaminated = "What are the best tools for your favorite programming lang?";
+    const res = validateQuestionQuality(contaminated, sampleProfile);
+    expect(res.valid).toBe(false);
+    expect(res.reason).toContain("contaminated or corrupted");
+  });
+
+  it("rejects questions containing unverified industries not present in profile", () => {
+    const unverified = "What are the best electronic signature platforms for medical hospitals?";
+    const res = validateQuestionQuality(unverified, sampleProfile);
+    expect(res.valid).toBe(false);
+    expect(res.reason).toContain("unverified industry");
+  });
 });
+

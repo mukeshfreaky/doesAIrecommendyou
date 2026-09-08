@@ -11,7 +11,7 @@ import { calculateVisibilityScore } from "@/scoring/scoringEngine";
 import { generateActionableRecommendations } from "@/recommendations/recommendationEngine";
 import { checkRateLimit, extractClientIp } from "@/lib/rateLimit";
 import { getRecentScanForDomain, saveScanReport } from "@/lib/scanStorage";
-import { QuestionResult, ScanReport } from "@/types";
+import { ProviderMetadata, QuestionResult, ScanReport } from "@/types";
 
 export const maxDuration = 60; // 60 seconds timeout for full pipeline
 
@@ -140,6 +140,7 @@ export async function POST(req: NextRequest) {
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     let totalEstimatedCost = 0;
+    let lastMetadata: ProviderMetadata | undefined;
     const startOverallTime = Date.now();
 
     const delimitedEvidence = formatDelimitedEvidence(businessProfile);
@@ -152,6 +153,7 @@ export async function POST(req: NextRequest) {
         { enableSearchGrounding: true }
       );
 
+      lastMetadata = aiResponse.metadata;
       totalSearchQueries += aiResponse.groundingQueries.length;
       totalInputTokens += aiResponse.tokenUsage?.promptTokens || 0;
       totalOutputTokens += aiResponse.tokenUsage?.completionTokens || 0;
@@ -238,7 +240,9 @@ export async function POST(req: NextRequest) {
       providerMetadata: {
         providerId: provider.id,
         modelId: provider.modelId,
-        searchGroundingEnabled: true,
+        searchGroundingEnabled: lastMetadata?.searchGroundingEnabled ?? true,
+        searchGroundingStatus: lastMetadata?.searchGroundingStatus ?? "GROUNDED",
+        groundingError: lastMetadata?.groundingError,
         searchQueriesExecuted: totalSearchQueries,
         inputTokens: totalInputTokens,
         outputTokens: totalOutputTokens,

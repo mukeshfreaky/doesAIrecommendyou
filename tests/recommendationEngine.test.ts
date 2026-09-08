@@ -6,6 +6,8 @@ describe("Prescriptive Recommendation Engine", () => {
   const profileWithoutPricing: BusinessProfile = {
     name: "AnalyticsPro",
     domain: "analyticspro.io",
+    canonicalCategory: "Product Analytics & Event Tracking",
+    canonicalCategoryConfidence: "HIGH",
     description: "Enterprise user analytics platform.",
     productsOrServices: ["User Analytics"],
     targetCustomers: ["Product Managers"],
