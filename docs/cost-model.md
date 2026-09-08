@@ -3,7 +3,7 @@
 **Product:** Does AI Recommend You?  
 **Document Status:** Audited & Verified against Official Documentation (Phase 0)  
 **Date:** September 8, 2026  
-**Standard:** Primary official pricing only. No unverified estimates.
+**Standard:** Primary official pricing only. Models search query variance (1.0x, 1.5x, 2.0x).
 
 ---
 
@@ -11,13 +11,13 @@
 
 This document provides exact, audited unit economics for *Does AI Recommend You?*, answering the operational question:
 
-> **"How much does one scan cost us, and how does the cost scale from 1 to 10,000 scans?"**
+> **"How much does one scan cost us, and how does cost scale from 1 to 10,000 scans under real-world search query variance?"**
 
-All token and search rates below reflect official documentation as of **September 2026**.
+All token and search rates below reflect official Google documentation as of **September 2026**.
 
 ---
 
-## 2. Per-Unit Cost Assumptions (Gemini 3.8 Flash)
+## 2. Per-Unit Cost Assumptions (Gemini 3.8 Flash / 2.5 Flash)
 
 * **Input Tokens per Question:** ~350 tokens (System prompt, website context, buyer question).
   * Rate: $0.75 per 1,000,000 tokens ($0.00000075 / token).
@@ -25,63 +25,59 @@ All token and search rates below reflect official documentation as of **Septembe
 * **Output Tokens per Question:** ~450 tokens (includes model thinking + synthesized answer).
   * Rate: $3.75 per 1,000,000 tokens ($0.00000375 / token).
   * Cost: $0.00000375 x 450 = **$0.0016875**.
-* **Token Cost Subtotal per Question:** $0.0002625 + $0.0016875 = **$0.00195** (~0.20 cents).
-* **Google Search Grounding Fee:**
-  * Free Tier: 5,000 free search queries per month.
-  * Paid Tier: $14.00 per 1,000 queries = **$0.01400** per search query.
+* **Base Token Cost Subtotal per Question:** $0.0002625 + $0.0016875 = **$0.00195** (~0.20 cents).
+* **Token Cost per 5-Question Scan:** 5 x $0.00195 = **$0.00975** (~0.98 cents).
+
+### Google Search Grounding Rates
+* **Free Tier Quota:** 5,000 free search queries per month (shared across 3.x models in Google AI Studio).
+* **Paid Tier Search Fee:** $14.00 per 1,000 search queries = **$0.01400** per search query.
 
 ---
 
-## 3. Audited Cost Breakdown Across Scale
+## 3. Search Query Multiplier Scenarios (Uncertainty Modeling)
 
-A standard MVP scan evaluates **5 high-intent buyer questions**.
+A single prompt sent to Gemini with Search Grounding may trigger **1.0 to 2.0 actual search queries** depending on the complexity of the category and ambiguity of the prompt. Therefore, costs cannot be assumed to be a fixed $0.08 per scan.
 
-### Scenario A: Within Google AI Studio Free Quota (First 1,000 scans / 5,000 questions per month)
-* Grounding search fee: **$0.00** (covered by 5,000 free monthly queries).
-* Only token fees apply (or $0.00 if using AI Studio free token quota):
-
-| Scale | Total Questions | Search Fee | Token Fee (Paid Token Rate) | Total Cost (Subsidized) | Cost Per Scan |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **1 Buyer Question** | 1 | $0.00 | $0.00195 | **$0.00195** | $0.00195 |
-| **5-Question Scan (1 Scan)** | 5 | $0.00 | $0.00975 | **$0.00975** (~1 cent) | **~$0.010** |
-| **100 Scans** | 500 | $0.00 | $0.98 | **$0.98** | **~$0.010** |
-| **1,000 Scans (Cap of Free Quota)** | 5,000 | $0.00 | $9.75 | **$9.75** | **~$0.010** |
+We model three operational scenarios:
+* **Scenario A (1.0x Queries / Question - Best Case):** 1 search query per buyer question = 5 search queries per scan.
+* **Scenario B (1.5x Queries / Question - Expected Average):** Some questions trigger a secondary clarifying query = 7.5 effective search queries per scan.
+* **Scenario C (2.0x Queries / Question - Stress Case):** Complex comparative queries trigger 2 searches = 10 search queries per scan.
 
 ---
 
-### Scenario B: Standard Paid Production Tier (Unsubsidized Rates)
-When exceeding the free tier or operating on enterprise billing ($14/1k queries + standard tokens):
-* **Total Cost per Question:** $0.00195 (tokens) + $0.01400 (search) = **$0.01595** (~1.60 cents).
-* **Total Cost per 5-Question Scan:** 5 x $0.01595 = **$0.07975** (~7.98 cents).
+## 4. Cost Scaling: 1 to 10,000 Scans (Unsubsidized Production Rates)
 
-| Scale | Total Questions | Search Grounding Fee | Token Usage Fee | Total USD Cost | Effective Cost / Scan |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **1 Buyer Question** | 1 | $0.0140 | $0.00195 | **$0.01595** | $0.01595 |
-| **5-Question Scan (1 Scan)** | 5 | $0.0700 | $0.00975 | **$0.07975** | **~$0.080** |
-| **100 Scans** | 500 | $7.00 | $0.98 | **$7.98** | **~$0.080** |
-| **1,000 Scans** | 5,000 | $70.00 | $9.75 | **$79.75** | **~$0.080** |
-| **10,000 Scans** | 50,000 | $700.00 | $97.50 | **$797.50** | **~$0.080** |
+*Note: The existing ~$0.07975 figure represents the **1.0 search query per question baseline scenario**. It is NOT a guaranteed exact production cost.*
 
----
+### Breakdown for a Single 5-Question Scan ($0.00975 tokens + search):
+* **1.0x Queries:** Search = $0.0700 | Tokens = $0.00975 | **Total = $0.07975 (~$0.080)**
+* **1.5x Queries:** Search = $0.1050 | Tokens = $0.00975 | **Total = $0.11475 (~$0.115)**
+* **2.0x Queries:** Search = $0.1400 | Tokens = $0.00975 | **Total = $0.14975 (~$0.150)**
 
-## 4. Alternative Provider Economics Comparison (Unsubsidized)
+### Scaling Table Across Query Intensities (Paid Production Tier)
 
-| Provider / Model | Cost per Question | 5-Question Scan | 100 Scans | 1,000 Scans | 10,000 Scans | Key Limitations |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Gemini 3.8 Flash** | **$0.01595** | **$0.0798** | **$7.98** | **$79.75** | **$797.50** | 5,000 free search queries/mo reduces early scale cost |
-| **Perplexity Sonar (Agent API)** | **$0.00580** | **$0.0290** | **$2.90** | **$29.00** | **$290.00** | No free tier; legacy API deprecated Sept 27, 2026; no claim offsets |
-| **OpenAI (Web Search)** | **~$0.01500?$0.02500** | **~$0.0750?$0.1250** | **$7.50?$12.50** | **$75.00?$125.00** | **$750.00?$1,250.00** | Web content token injection causes variable, unpredictable costs |
+| Scale | Total Questions | 1.0x Scenario (5 queries/scan) | 1.5x Scenario (7.5 queries/scan) | 2.0x Scenario (10 queries/scan) |
+| :--- | :--- | :--- | :--- | :--- |
+| **1 Buyer Question** | 1 | $0.0160 | $0.0230 | $0.0300 |
+| **5-Question Scan** | 5 | **$0.0798 (~$0.08)** | **$0.1148 (~$0.11)** | **$0.1498 (~$0.15)** |
+| **100 Scans** | 500 | **$7.98** ($7.00 search + $0.98 tok) | **$11.48** ($10.50 search + $0.98 tok) | **$14.98** ($14.00 search + $0.98 tok) |
+| **1,000 Scans** | 5,000 | **$79.75** ($70.00 search + $9.75 tok) | **$114.75** ($105.00 search + $9.75 tok) | **$149.75** ($140.00 search + $9.75 tok) |
+| **10,000 Scans** | 50,000 | **$797.50** ($700 search + $97.50 tok) | **$1,147.50** ($1,050 search + $97.50 tok) | **$1,497.50** ($1,400 search + $97.50 tok) |
 
 ---
 
-## 5. Cost Control & Defensive Architecture
+## 5. Free-Tier Subsidized Economics (First 1,000 Scans/Month)
 
-1. **Deterministic 24-Hour Domain Caching:**
-   * Re-scanning the same domain within 24 hours serves the cached report.
-   * Prevents duplicate scans from burning API budget.
-2. **IP & Session Rate Limiting:**
-   * Anonymous users: Max 3 scans per IP per 24-hour window.
-3. **Domain Frequency Limiting:**
-   * A root domain cannot be scanned more than once every 12 hours on the free tier.
-4. **Usage Telemetry Logging:**
-   * Every scan logs: `provider`, `model`, `promptCount`, `inputTokens`, `outputTokens`, `searchQueriesExecuted`, `estimatedCostUSD`, and `timestamp`.
+Under Google AI Studio's 5,000 free search queries per month:
+* At 1.0x queries/question: Up to **1,000 scans** have **$0.00 search fees** (Total cost = $9.75 token cost only).
+* At 1.5x queries/question: Up to **666 scans** covered by free search quota.
+* At 2.0x queries/question: Up to **500 scans** covered by free search quota.
+
+---
+
+## 6. Defensive Cost Controls
+
+1. **Deterministic 24-Hour Domain Caching:** Serving cached reports for duplicate scans reduces external queries by an estimated 40?60%.
+2. **IP Rate Limiting:** 3 scans per IP per 24 hours for anonymous users.
+3. **Domain Frequency Cap:** 1 scan per domain per 12 hours on public tier.
+4. **Telemetry Logging:** Every scan captures: `provider`, `model`, `promptCount`, `inputTokens`, `outputTokens`, `searchQueriesExecuted`, and `estimatedCostUSD`.

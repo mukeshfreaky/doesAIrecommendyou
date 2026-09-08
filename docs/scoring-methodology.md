@@ -1,8 +1,9 @@
 # AI Recommendation Visibility Scoring Methodology (Audited)
 
 **Product:** Does AI Recommend You?  
-**Document Status:** Audited & Statistically Validated (Phase 0)  
+**Document Status:** Audited Initial Scoring Methodology (Phase 0)  
 **Date:** September 8, 2026  
+**Note:** The formula weights (50% / 35% / 15%) represent an audited initial heuristic methodology designed for mathematical coherence and transparency, subject to future empirical validation against customer conversion data.
 
 ---
 
@@ -12,7 +13,7 @@ Most legacy SEO tools assign arbitrary, unexplainable "Authority Scores" (0?100)
 
 1. **Transparent & Componentized:** Every point in the score traces directly to observable AI recommendations across evaluated buyer queries.
 2. **Postural Nuance:** We strictly distinguish between a mere *mention*, an *active consideration*, a *viable recommendation*, and the *#1 top recommendation*.
-3. **Statistical Validity across Single vs. Multi-Provider Scans:** We explicitly reject arbitrary fudge factors (such as awarding free points for unmeasured "consistency" when only a single provider is queried).
+3. **Statistical Coherence across Single vs. Multi-Provider Scans:** We explicitly reject arbitrary fudge factors (such as awarding free points for unmeasured "consistency" when only a single provider is queried).
 4. **Citations as Supporting Evidence, Not Score Drivers:** Citations are analyzed to diagnose *why* a result occurred, not used as an artificial score multiplier.
 
 ---
@@ -47,18 +48,7 @@ Notice that by mathematical construction: $0 \le R_{	ext{top}} \le R_{	ext{rec}}
 
 ---
 
-### B. Audit Finding & Critique: The "Single-Provider Consistency" Fallacy
-
-> **Audit Correction:** An earlier draft proposed:  
-> `S = 100 * (0.40 * R_rec + 0.35 * R_top + 0.15 * R_cons + 0.10 * C_prov)`  
-> where `C_prov = 1.0 if R_cons > 0`.  
->
-> **Why this was flawed:**  
-> In a single-provider scan (such as the initial Gemini MVP), "cross-provider consistency" cannot be measured because only one provider is evaluated ($K=1$). Awarding an arbitrary 10% (10 points) solely because a brand was considered once artificially inflates the score by 10 points and penalizes a brand with 0 points if absent. It conflates consideration with consistency.
-
----
-
-### C. Corrected Single-Provider Scoring Formula ($K = 1$)
+## 4. Audited Initial Single-Provider Scoring Formula ($K = 1$)
 
 For the MVP and single-provider scans, the weights are normalized strictly over the three observable recommendation dimensions ($\sum w_i = 1.00$):
 
@@ -76,7 +66,7 @@ $$S_{	ext{single}} = 100 	imes \left( 0.50 \cdot R_{	ext{rec}} + 0.35 \cdot R_{	
 
 ---
 
-### D. Multi-Provider Scoring Formula ($K \ge 2$)
+## 5. Multi-Provider Scoring Formula ($K \ge 2$)
 
 When multiple AI providers are queried (e.g. Gemini, Perplexity, OpenAI):
 
@@ -93,11 +83,9 @@ When multiple AI providers are queried (e.g. Gemini, Perplexity, OpenAI):
 4. The composite multi-provider score is:
    $$S_{	ext{multi}} = ar{S} 	imes \left( 0.85 + 0.15 \cdot C_{	ext{prov}} ight)$$
 
-This formulation ensures high agreement across models rewards consistency, while severe divergence across models modestly dampens the score, without arbitrarily fabricating data.
-
 ---
 
-## 4. Citations: Supporting Evidence vs. Score Proxy
+## 6. Citations: Supporting Evidence vs. Score Proxy
 
 Citations are explicitly separated from the visibility score:
 * A brand can be cited in negative or critical articles; treating citation volume as a positive proxy creates false positives.
