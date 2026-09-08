@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { RecommendationPosture, VisibilityScoreBreakdown } from "../src/types";
+import { calculateVisibilityScore } from "../src/scoring/scoringEngine";
 
 describe("Audited Scoring Methodology & Posture Verification", () => {
   it("defines the 5 core recommendation postures correctly", () => {
@@ -35,7 +36,6 @@ describe("Audited Scoring Methodology & Posture Verification", () => {
       recommendationRate: Math.round(recRate * 100),
       topRecommendationRate: Math.round(topRate * 100),
       considerationRate: Math.round(consRate * 100),
-      crossProviderConsistency: 100, // Normalized for single provider
       supportingCitationCount: 4,
       totalQuestionsEvaluated: total,
     };
@@ -44,6 +44,7 @@ describe("Audited Scoring Methodology & Posture Verification", () => {
     expect(breakdown.recommendationRate).toBe(50);
     expect(breakdown.topRecommendationRate).toBe(20);
     expect(breakdown.considerationRate).toBe(70);
+    expect(breakdown.crossProviderConsistency).toBeUndefined();
   });
 
   it("bounds scores correctly for extreme cases", () => {
@@ -60,4 +61,26 @@ describe("Audited Scoring Methodology & Posture Verification", () => {
     const consideredOnly = Math.round(100 * (0.50 * 0.0 + 0.35 * 0.0 + 0.15 * 0.60));
     expect(consideredOnly).toBe(9);
   });
+
+  it("ensures calculateVisibilityScore does not populate fabricated crossProviderConsistency", () => {
+        const result = calculateVisibilityScore([
+      {
+        questionId: "q1",
+        category: "CATEGORY_DISCOVERY",
+        question: "test",
+        rationale: "test",
+        rawAIResponse: "test",
+        posture: "TOP_RECOMMENDATION",
+        recommendationReason: "test",
+        competitors: [],
+        citedSources: [],
+        supportingEvidence: [],
+        searchQueries: [],
+      }
+    ]);
+
+    expect(result.crossProviderConsistency).toBeUndefined();
+    expect(result.overallScore).toBe(100);
+  });
+
 });

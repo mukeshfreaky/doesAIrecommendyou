@@ -90,7 +90,7 @@ export const ScanFlow: React.FC = () => {
         </h1>
 
         <p className="text-base sm:text-lg text-slate-400 max-w-xl mx-auto mt-4 leading-relaxed">
-          See whether Google Gemini, ChatGPT, and AI engines recommend you for real buyer queries, uncover which competitors win instead, and get actionable prescriptions to become more recommendable.
+          See whether AI recommends your business for real buyer questions ? starting with Google Gemini. Uncover which competitors win instead and get actionable prescriptions to become more recommendable.
         </p>
       </div>
 

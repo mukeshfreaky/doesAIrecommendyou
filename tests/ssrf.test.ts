@@ -50,4 +50,16 @@ describe("SSRF Protection & Network Validation", () => {
     const ftpRes = await validateTargetUrl("ftp://ftp.example.com");
     expect(ftpRes.isValid).toBe(false);
   });
+
+  it("blocks redirect SSRF targets resolving to internal/metadata IPs", async () => {
+    const redirectTarget1 = "http://127.0.0.1:8080/internal";
+    const redirectTarget2 = "http://169.254.169.254/computeMetadata/v1/";
+    const redirectTarget3 = "http://10.0.0.5/api";
+    const redirectTarget4 = "http://[::1]/admin";
+
+    expect((await validateTargetUrl(redirectTarget1)).isValid).toBe(false);
+    expect((await validateTargetUrl(redirectTarget2)).isValid).toBe(false);
+    expect((await validateTargetUrl(redirectTarget3)).isValid).toBe(false);
+    expect((await validateTargetUrl(redirectTarget4)).isValid).toBe(false);
+  });
 });

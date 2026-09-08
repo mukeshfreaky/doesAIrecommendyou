@@ -44,4 +44,20 @@ describe("AI Providers & Registry", () => {
     const provider = getProvider("mock");
     expect(provider.id).toBe("mock_provider");
   });
+
+  it("MockProvider handles responses with missing or empty grounding metadata safely", async () => {
+    const mock = new MockProvider();
+    mock.setMockResponse("custom-query", {
+      content: "Result without search grounding.",
+      citations: [],
+      groundingQueries: [],
+      rawGroundingMetadata: undefined,
+    });
+
+    const res = await mock.generateResponse("custom-query");
+    expect(res.content).toBe("Result without search grounding.");
+    expect(res.citations).toHaveLength(0);
+    expect(res.groundingQueries).toHaveLength(0);
+    expect(res.rawGroundingMetadata).toBeUndefined();
+  });
 });

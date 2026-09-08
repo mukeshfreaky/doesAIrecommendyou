@@ -15,15 +15,15 @@ export function generateActionableRecommendations(
 
   if (brandReviewCitations.length === 0) {
     const topDomains = Array.from(new Set(reviewCitations.map((c) => c.domain))).slice(0, 3);
-    const domainList = topDomains.length > 0 ? topDomains.join(", ") : "G2, Capterra, and TrustRadius";
+    const domainList = topDomains.length > 0 ? topDomains.join(", ") : "G2, Capterra, or TrustRadius";
     items.push({
       id: "rec_citations",
       category: "CITATION_SOURCE",
       priority: "HIGH",
       title: "Establish profiles on key AI-grounded review platforms",
-      description: `AI search grounding frequently cited review platforms (${domainList}) when answering buyer queries, but no profiles or customer reviews were indexed for ${profile.name}.`,
-      expectedImpact: "High ? Review domains account for over 40% of commercial AI grounding citations.",
-      rationale: "LLMs heavily weight verified user review directories for B2B commercial recommendations.",
+      description: `Search grounding frequently cited third-party review directories (${domainList}) when answering buyer queries, but no profiles or customer reviews were indexed for ${profile.name}.`,
+      expectedImpact: "Potentially useful supporting evidence ? third-party review directories often serve as trusted corroborating sources in search grounding.",
+      rationale: "Search-grounded models rely on independent third-party aggregators to verify commercial claims.",
     });
   }
 
@@ -34,9 +34,9 @@ export function generateActionableRecommendations(
       category: "CONTENT_GAP",
       priority: "HIGH",
       title: "Publish transparent pricing or tier details publicly",
-      description: `No pricing signals or plan structures were detected during the website crawl. AI engines default to recommending solutions with transparent, publicly crawlable pricing for cost-conscious buyer queries.`,
-      expectedImpact: "High ? Essential for passing price-to-value recommendation filters.",
-      rationale: "Search-grounded models penalize 'call for pricing' barriers when answering comparative buyer evaluations.",
+      description: `No pricing signals or plan structures were detected during the website crawl. AI engines frequently filter for publicly accessible pricing information when answering cost-conscious buyer queries.`,
+      expectedImpact: "Can make product and category information easier for crawlers to interpret for budget and value queries.",
+      rationale: "Search-grounded models struggle to evaluate cost-benefit tradeoffs when pricing is gated behind sales inquiries.",
     });
   }
 
@@ -48,9 +48,9 @@ export function generateActionableRecommendations(
       category: "COMPETITOR_DIFFERENTIATION",
       priority: "MEDIUM",
       title: `Publish direct alternative & comparison pages vs. ${topCompetitor.name}`,
-      description: `${topCompetitor.name} was recommended in ${topCompetitor.frequency} evaluated queries. Create dedicated, objective 'Alternative to ${topCompetitor.name}' and comparison pages highlighting your specific advantages.`,
-      expectedImpact: "Medium ? Direct capture of switching and alternative evaluation queries.",
-      rationale: "AI engines favor objective comparison pages that explicitly contrast technical tradeoffs and workflow differences.",
+      description: `${topCompetitor.name} was recommended across ${topCompetitor.frequency} evaluated queries. Publishing objective comparison pages helps search crawlers identify your specific functional tradeoffs.`,
+      expectedImpact: "May improve comparative visibility against recognized incumbents for alternative buyer searches.",
+      rationale: "Search-grounded models retrieve comparison pages when answering switching and alternative queries.",
     });
   }
 
@@ -60,8 +60,8 @@ export function generateActionableRecommendations(
     category: "SCHEMA_METADATA",
     priority: "MEDIUM",
     title: "Implement Schema.org SoftwareApplication & FAQPage JSON-LD",
-    description: `Embed structured JSON-LD data describing ${profile.name}'s features, target category, supported platforms, and key FAQs directly on the homepage and product pages.`,
-    expectedImpact: "Medium ? Improves LLM crawler semantic parsing fidelity by 30-50%.",
+    description: `Embed structured JSON-LD data describing ${profile.name}'s features, target category, and key FAQs directly in website markup.`,
+    expectedImpact: "May improve machine-readable understanding and entity disambiguation for web crawlers.",
     rationale: "Structured semantic schema provides unambiguous entity and capability definitions to web crawlers.",
   });
 
@@ -72,8 +72,8 @@ export function generateActionableRecommendations(
       category: "AUTHORITY_BUILDING",
       priority: "MEDIUM",
       title: "Drive authentic community discussions and third-party mentions",
-      description: `Participate in domain discussions on community hubs (Reddit, Hacker News, relevant technical forums) where practitioners ask for real-world software recommendations.`,
-      expectedImpact: "High ? Surfaces brand in conversational and community-grounded AI search results.",
+      description: `Engage in relevant technical and industry discussions where practitioners ask for real-world software recommendations.`,
+      expectedImpact: "Potentially useful supporting evidence for conversational and community-grounded AI search results.",
       rationale: "Search-grounded models index active community discussions as high-trust recommendations.",
     });
   }

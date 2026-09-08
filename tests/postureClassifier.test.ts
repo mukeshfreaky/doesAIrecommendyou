@@ -54,4 +54,16 @@ Other options worth considering include Splunk, AppDynamics, and **AcmeMetrics**
     expect(result.posture).toBe("NOT_MENTIONED");
     expect(result.brandRank).toBeUndefined();
   });
+
+  it("gracefully handles malformed or empty AI responses", () => {
+    const emptyRes = classifyPosture(brand, domain, "");
+    expect(emptyRes.posture).toBe("NOT_MENTIONED");
+    expect(emptyRes.supportingEvidence).toHaveLength(0);
+
+    const whitespaceRes = classifyPosture(brand, domain, "   \n\t  ");
+    expect(whitespaceRes.posture).toBe("NOT_MENTIONED");
+
+    const garbageRes = classifyPosture(brand, domain, "<xml>{}[]\\///???***</xml>");
+    expect(garbageRes.posture).toBe("NOT_MENTIONED");
+  });
 });

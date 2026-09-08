@@ -69,4 +69,20 @@ describe("Prescriptive Recommendation Engine", () => {
     expect(competitorAction).toBeDefined();
     expect(competitorAction?.description).toContain("Mixpanel");
   });
+
+  it("does not emit unsupported numerical percentage claims in impact or rationale", () => {
+    const items = generateActionableRecommendations(
+      score,
+      [] as QuestionResult[],
+      competitors,
+      citations,
+      profileWithoutPricing
+    );
+
+    for (const item of items) {
+      expect(item.expectedImpact).not.toMatch(/\d+%/);
+      expect(item.expectedImpact).not.toMatch(/\d+-\d+%/);
+      expect(item.description).not.toMatch(/\d+%/);
+    }
+  });
 });

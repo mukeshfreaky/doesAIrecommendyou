@@ -2,12 +2,18 @@ import { AIProvider } from "./types";
 import { GeminiProvider } from "./gemini";
 import { MockProvider } from "./mock";
 
+/**
+ * Returns the requested AI provider.
+ * Enforces strictly: NO fake fallback responses in the production scan path.
+ * MockProvider is permitted ONLY for isolated unit tests or explicit offline test harnesses.
+ */
 export function getProvider(providerId?: string): AIProvider {
-  if (providerId === "mock" || process.env.NEXT_PUBLIC_MOCK_PROVIDER === "true") {
+  // Only allow MockProvider if explicitly requested in test/non-prod environment
+  if (providerId === "mock" && process.env.NODE_ENV !== "production") {
     return new MockProvider();
   }
 
-  // Default to Gemini
+  // Production and live pipeline always use real Google Gemini provider
   return new GeminiProvider();
 }
 

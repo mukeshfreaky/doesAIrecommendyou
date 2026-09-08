@@ -14,8 +14,7 @@ export function calculateVisibilityScore(
       recommendationRate: 0,
       topRecommendationRate: 0,
       considerationRate: 0,
-      crossProviderConsistency: 100,
-      supportingCitationCount: 0,
+            supportingCitationCount: 0,
       totalQuestionsEvaluated: 0,
     };
   }
@@ -53,8 +52,7 @@ export function calculateVisibilityScore(
     recommendationRate: Math.round(recRate * 100),
     topRecommendationRate: Math.round(topRate * 100),
     considerationRate: Math.round(consRate * 100),
-    crossProviderConsistency: 100, // Normalized for single provider
-    supportingCitationCount,
+        supportingCitationCount,
     totalQuestionsEvaluated: total,
   };
 }

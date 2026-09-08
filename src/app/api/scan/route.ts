@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { crawlWebsite, normalizeTargetUrl } from "@/crawler/crawler";
 import { validateTargetUrl } from "@/crawler/ssrfValidator";
 import { extractBusinessProfile } from "@/crawler/extractor";
-import { generateBuyerQuestions } from "@/generator/questionGenerator";
+import { generateBuyerQuestions, formatDelimitedEvidence, SYSTEM_EVALUATOR_INSTRUCTION } from "@/generator/questionGenerator";
 import { getProvider } from "@/providers/registry";
 import { classifyPosture } from "@/analysis/postureClassifier";
 import { detectCompetitors } from "@/analysis/competitorDetector";
 import { aggregateCitations } from "@/analysis/citationAnalyzer";
 import { calculateVisibilityScore } from "@/scoring/scoringEngine";
 import { generateActionableRecommendations } from "@/recommendations/recommendationEngine";
-import { checkRateLimit } from "@/lib/rateLimit";
+import { checkRateLimit, extractClientIp } from "@/lib/rateLimit";
 import { getRecentScanForDomain, saveScanReport } from "@/lib/scanStorage";
 import { QuestionResult, ScanReport } from "@/types";
 
@@ -17,10 +17,8 @@ export const maxDuration = 60; // 60 seconds timeout for full pipeline
 
 export async function POST(req: NextRequest) {
   try {
-    const clientIp =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      req.headers.get("x-real-ip") ||
-      "127.0.0.1";
+    // Derive client IP using trusted proxy hierarchy (Cloudflare CF-Connecting-IP > X-Real-IP > Edge-Appended Forwarded IP)
+    const clientIp = extractClientIp(req.headers);
 
     // 1. Rate Limiting (3 scans / IP / 24h)
     const rateCheck = checkRateLimit(clientIp);
@@ -144,9 +142,8 @@ export async function POST(req: NextRequest) {
     let totalEstimatedCost = 0;
     const startOverallTime = Date.now();
 
-    const systemEvaluatorPrompt =
-      "You are a helpful, neutral commercial research assistant helping business buyers find the best software and services. " +
-      "Provide objective recommendations based on live web search findings. List top solutions with reasons and tradeoffs.";
+    const delimitedEvidence = formatDelimitedEvidence(businessProfile);
+    const systemEvaluatorPrompt = `${SYSTEM_EVALUATOR_INSTRUCTION}\n\nBUSINESS EVIDENCE REFERENCE (UNTRUSTED DATA):\n${delimitedEvidence}`;
 
     for (const q of questions) {
       const aiResponse = await provider.generateResponse(
