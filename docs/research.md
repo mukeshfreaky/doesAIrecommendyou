@@ -1,129 +1,117 @@
-# Provider Feasibility & Technical Research
+# Provider Feasibility & Technical Research (Audited)
 
 **Product:** Does AI Recommend You?  
-**Document Status:** Complete (Phase 0)  
-**Date:** September 2026  
+**Document Status:** Audited & Verified against Official Documentation (Phase 0)  
+**Date:** September 8, 2026  
+**Audit Standard:** Primary official developer documentation only. Unverified legacy claims removed.
 
 ---
 
 ## 1. Executive Summary
 
-To answer *"Does AI recommend your business?"*, the system queries frontier AI models with conversational buyer prompts and evaluates how brands are presented. 
+To answer *"Does AI recommend your business?"*, our engine queries frontier AI models with conversational buyer prompts and evaluates how brands and competitors are recommended.
 
-Because we hold an absolute product ethic: **NEVER FAKE AI RESULTS**, we rely exclusively on legal, documented, developer-grade APIs. We strictly prohibit scraping consumer interfaces (chatgpt.com, perplexity.ai, gemini.google.com), bypassing CAPTCHAs, or fabricating citation data.
+Per our core product ethic: **NEVER FAKE AI RESULTS**, we rely exclusively on legal, documented, developer-grade APIs with live search grounding. We strictly prohibit scraping consumer chat interfaces (chatgpt.com, perplexity.ai, gemini.google.com), bypassing CAPTCHAs, or fabricating citation data.
 
-This document evaluates the four leading AI platforms across:
-1. Native web search / search grounding support.
-2. Citation extraction fidelity (URLs, source titles, snippet grounding).
-3. API stability and latency.
-4. Token economics and per-query costs.
-5. Terms of Service compliance and legal considerations.
+This audit establishes the verified capabilities, current model identifiers, grounding mechanics, and official rate cards for:
+1. **Google Gemini API** (Google AI for Developers / Vertex AI)
+2. **Perplexity API** (Agent API / Sonar models)
+3. **OpenAI API** (Responses API / Web Search tool)
+4. **Anthropic Claude API** (Custom tool retrieval status)
 
 ---
 
-## 2. In-Depth Provider Evaluation
+## 2. In-Depth Provider Audit
 
 ### A. Google Gemini API (Grounding with Google Search)
 
-* **Model Family:** Gemini 2.0 Flash (`gemini-2.0-flash`) and Gemini 1.5 Flash (`gemini-1.5-flash`).
+* **Primary Official Source:** [ai.google.dev/pricing](https://ai.google.dev/pricing), [ai.google.dev/gemini-api/docs/grounding](https://ai.google.dev/gemini-api/docs/grounding)
+* **Current Model Family (Verified September 2026):** **Gemini 3.8 Flash** (`gemini-3.8-flash`) is the current efficiency and high-speed model family. Legacy 1.5/2.0 models are superseded.
 * **Web Grounding Architecture:**
-  * Supported natively via the `google_search` tool (`tools: [{ googleSearch: {} }]`).
-  * When enabled, the model autonomously determines if live web information is needed, executes one or more real Google web searches, synthesizes the answer, and links statements to specific web sources.
+  * Configured via `tools: [{ googleSearch: {} }]` (or `google_search`).
+  * Executes live Google Search queries and injects grounded web citations into the response.
 * **Citation & Metadata Quality:**
-  * Returns a structured `groundingMetadata` payload containing:
-    * `webSearchQueries`: The exact search queries Gemini executed to formulate the answer.
-    * `groundingChunks`: Array of web sources with exact URLs (`uri`) and page titles (`title`).
-    * `groundingSupports`: Fine-grained character-offset mappings connecting generated claims to specific source indices.
-* **Pricing & Quotas:**
-  * **Free Tier:** 1,500 requests per day (free of charge in Google AI Studio).
-  * **Paid Tier:** $14 to $35 per 1,000 search queries + standard Flash token rates ($0.075 / 1M input tokens, $0.30 / 1M output tokens).
-* **Latency:** Extremely fast (typically 1.5?3.2 seconds for grounded queries on Gemini 2.0 Flash).
-* **Legal & Terms:** Fully compliant with Google Generative AI API Terms of Service. Designed specifically for enterprise search integration.
-
-### B. Perplexity API (Sonar Models)
-
-* **Model Family:** `sonar` (lightweight / 8B parameters) and `sonar-pro` (large / 70B parameters).
-* **Web Grounding Architecture:**
-  * Search is natively baked into the Sonar pipeline. Every query automatically queries Perplexity's internal search index and web crawlers.
-* **Citation & Metadata Quality:**
-  * Returns a top-level `citations: string[]` array containing resolved web URLs cited in the response text using bracket notation (e.g. `[1]`, `[2]`).
-  * Does not provide fine-grained character offsets or source titles natively in standard JSON (requires HTML/meta scraping of the URLs to extract titles).
-* **Pricing & Quotas:**
-  * `sonar`: $1.00 / 1M input tokens, $1.00 / 1M output tokens + **$5.00 flat search request fee per 1,000 requests**.
-  * `sonar-pro`: $3.00 / 1M input tokens, $15.00 / 1M output tokens + **$5.00 search fee per 1,000 requests**.
-  * No free tier for automated API testing; requires prepaid credit balance.
-* **Latency:** Moderate (2.5?5.0 seconds).
-* **Legal & Terms:** Permitted under Perplexity API Developer Agreement.
-
-### C. OpenAI API (Responses API with Web Search Tool)
-
-* **Model Family:** `gpt-4o` and `gpt-4o-mini` with `web_search` tool.
-* **Web Grounding Architecture:**
-  * The model issues explicit tool calls to search the web and inspect retrieved pages.
-* **Citation & Metadata Quality:**
-  * Generates URLs in markdown references or message tool outputs.
-* **Pricing & Quotas:**
-  * **Tool Call Fees:** $25.00 per 1,000 search calls for non-reasoning models ($10.00 / 1k for reasoning models).
-  * **Retrieved Content Tokens:** Web pages fetched during search are injected into context and billed as standard input tokens, which can rapidly increase token consumption (often 2,000?6,000 tokens per search).
-  * Total cost per grounded query is high ($0.03?$0.08 per prompt).
-* **Latency:** High (4.0?9.0 seconds due to multi-turn tool execution loops).
-* **Legal & Terms:** Compliant with OpenAI Developer Policy.
-
-### D. Anthropic Claude API (Claude 3.5 Sonnet / 3.5 Haiku)
-
-* **Model Family:** `claude-3-5-sonnet`, `claude-3-5-haiku`.
-* **Web Grounding Architecture:**
-  * Anthropic does not currently provide a native, managed live web search tool within standard Claude API endpoints.
-  * To ground Claude responses, developers must implement custom Retrieval-Augmented Generation (RAG) by integrating external search engines (e.g., Tavily, Brave Search, or Bing Web Search API).
-* **Evaluation:** High implementation complexity and double-billing (paying search engine API + Anthropic API). Deferred for Phase 2/3.
+  * Returns `groundingMetadata` containing:
+    * `webSearchQueries`: The exact search queries Google executed to ground the answer.
+    * `groundingChunks`: Array of web sources with verified URLs (`uri`) and page titles (`title`).
+    * `groundingSupports`: Precise sentence-level text segment offsets mapped to corresponding sources.
+* **Verified Pricing (Through Dec 31, 2026 Introductory Rate):**
+  * **Input Tokens:** $0.75 per 1,000,000 tokens ($0.00000075 / token).
+  * **Output Tokens (includes thinking tokens):** $3.75 per 1,000,000 tokens ($0.00000375 / token).
+  * **Context Caching:** $0.075 / 1M tokens (read), $0.50 / 1M tokens/hour (storage).
+* **Verified Search Grounding Quotas & Fees:**
+  * **Free Tier Quota:** **5,000 free search requests per month** (shared across Gemini 3.x models in Google AI Studio).
+  * **Paid Tier Search Fee:** **$14.00 per 1,000 search queries** ($0.014 per search query).
+  * *Note on query count:* A single prompt may execute 1 to 2 search queries depending on prompt complexity.
+* **Terms of Service Compliance:** Fully compliant with Google Generative AI API terms. Permitted for commercial programmatic synthesis.
 
 ---
 
-## 3. Comparative Summary Table
+### B. Perplexity API (Sonar & Agent API)
 
-| Evaluation Criterion | Google Gemini 2.0 Flash | Perplexity Sonar | OpenAI (Web Search) | Anthropic Claude |
-| :--- | :--- | :--- | :--- | :--- |
-| **Native Web Search** | Yes (`googleSearch` tool) | Yes (Default in Sonar) | Yes (`web_search` tool) | No (Requires custom RAG) |
-| **Citation Precision** | Outstanding (URLs, titles, claim spans) | High (URLs array, inline `[1]`) | Good (Markdown URLs) | Dependent on external search |
-| **Cost per 1,000 Scans** | ~$0 (Free tier) / ~$14?$35 | ~$6?$8 | ~$25?$80 | Variable (High) |
-| **Average Latency** | 1.8 ? 2.8s | 3.0 ? 4.5s | 4.5 ? 8.0s | N/A |
-| **Free Developer Tier** | 1,500 requests/day | None ($0 balance = fails) | None | None |
-| **Stability & Uptime** | 99.9% (Google Cloud SLA) | Moderate | High | High |
-| **Risk of Scraping Ban** | 0% (Official API) | 0% (Official API) | 0% (Official API) | 0% (Official API) |
-
----
-
-## 4. Provider Selection for Initial Implementation
-
-### **Selected Provider: Google Gemini 2.0 Flash (with Search Grounding)**
-
-### Rationale:
-1. **Unmatched Citation Granularity:** Gemini's `groundingMetadata` does not just return raw URLs; it returns the exact page titles, web search queries executed, and precise claim mappings (`groundingSupports`). This directly fuels our **Citation / Source Analysis** and **AI Claim vs. Website Evidence** engines.
-2. **Superior Cost-Efficiency:** The 1,500 requests/day free quota under Google AI Studio allows us to build, test, and offer free scans to early users with **zero infrastructure API cost**. On paid tiers, Flash token costs are a fraction of GPT-4o or Sonar Pro.
-3. **Speed & UX:** Gemini 2.0 Flash has the fastest time-to-first-token and complete response generation among all web-grounded models, keeping the free user report generation time under 10 seconds for a full 5-question scan.
-4. **Clean Abstraction Compatibility:** The architecture will isolate the provider behind a standard `AIProvider` interface. Perplexity and OpenAI adapters will be implemented immediately thereafter as pluggable modules.
+* **Primary Official Source:** [docs.perplexity.ai](https://docs.perplexity.ai), [perplexity.ai/pricing](https://perplexity.ai/pricing)
+* **API Lifecycle Notice (Critical Audit Finding):**
+  * Perplexity is officially phasing out the legacy **Sonar Chat Completions API**, with end-of-support on **September 27, 2026**.
+  * All new implementations must target the **Agent API**.
+* **Current Model Family:**
+  * `sonar` (Lightweight web search model)
+  * `sonar-pro` (Deep search model)
+  * `sonar-reasoning-pro`
+  * `sonar-deep-research`
+* **Verified Pricing:**
+  * **`sonar` Tokens:** $1.00 / 1M input tokens, $1.00 / 1M output tokens.
+  * **`sonar-pro` Tokens:** $3.00 / 1M input tokens, $15.00 / 1M output tokens.
+  * **Per-Request Search Fee:** **$5.00 to $14.00 per 1,000 requests** ($0.005 to $0.014 per request depending on search context depth).
+* **Citation & Metadata Quality:**
+  * Returns top-level `citations: string[]` (array of resolved URLs).
+  * Does NOT provide native page titles or fine-grained text offset attributions in the base response (requires client-side HTML parsing to resolve titles).
+* **Free Tier:** None for API access. Requires prepaid credit balance.
 
 ---
 
-## 5. Security & Crawler Best Practices
+### C. OpenAI API (Web Search Tool)
 
-### A. SSRF (Server-Side Request Forgery) Protection
-When the user enters a website URL (e.g. `example.com`), our server fetches the page to extract metadata. We must prevent malicious users from targeting internal services or cloud metadata.
-* **Prohibited IP Ranges:**
-  * `127.0.0.0/8` (Loopback / Localhost)
-  * `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16` (Private RFC 1918)
-  * `169.254.169.254` (AWS / GCP / Cloud metadata services)
-  * `::1`, `fe80::/10`, `fc00::/7` (IPv6 loopback and unique local)
-* **Domain & Protocol Restrictions:**
-  * Only `http:` and `https:` protocols allowed.
-  * DNS resolution before fetch to verify IP is public.
-  * Maximum redirect hops: 3. Redirects re-validated against SSRF filters.
-* **Resource Limits:**
-  * Connection timeout: 5,000ms.
-  * Response body limit: 1.5MB (stream truncated immediately to prevent memory exhaustion).
-  * User-Agent clearly identifies scanner (`DoesAIRecommendYouBot/1.0 (+https://doesairecommendyou.com/bot)`).
+* **Primary Official Source:** [openai.com/api/pricing](https://openai.com/api/pricing), [developers.openai.com](https://developers.openai.com)
+* **Current Model Ecosystem (Verified September 2026):**
+  * Core models include the **GPT-6 Astra** family and **GPT-5.6** (Sol, Terra, Luna), alongside `gpt-4o` and reasoning models.
+* **Web Search Architecture & Tool Fees:**
+  * Web search is billed as a tool invocation on top of base model token rates.
+  * **Standard Web Search Tool Fee:** **$10.00 per 1,000 calls** ($0.01 per search call).
+  * **Search Content Tokens:** Web pages fetched during search are injected into model context and billed at the model's standard input token rate.
+  * *Note:* Retrieved content typically adds 2,000 to 5,000 input tokens per query, making total query cost variable ($0.015 to $0.035+ per prompt).
+* **Citation Quality:** Generates markdown-style URLs or tool output citation objects.
+* **Free Tier:** None for web search tool calls.
 
-### B. Provider API Key Security
-* Provider keys (`GEMINI_API_KEY`, `OPENAI_API_KEY`, `PERPLEXITY_API_KEY`) are strictly server-side environment variables (`.env.local`).
-* Never exposed in client-side bundles or network payloads.
-* If a key is missing on the server, the application presents a clear administrative configuration notice rather than prompting anonymous web visitors for credentials.
+---
+
+### D. Anthropic Claude API
+
+* **Primary Official Source:** [docs.anthropic.com](https://docs.anthropic.com)
+* **Status:** Anthropic does not provide a first-party native live web search tool within standard Claude API endpoints.
+* **Evaluation:** Requires building custom tool-use loops integrated with third-party search APIs (e.g. Brave, Tavily, Bing), incurring double API fees and high latency. Deferred for future multi-model expansion.
+
+---
+
+## 3. Audited Comparative Matrix
+
+| Dimension | Google Gemini 3.8 Flash | Perplexity Sonar (Agent API) | OpenAI (Web Search Tool) |
+| :--- | :--- | :--- | :--- |
+| **Model Evaluated** | `gemini-3.8-flash` | `sonar` (Agent API) | `gpt-4o-mini` / `gpt-5.6-sol` |
+| **Input Token Rate (/1M)** | $0.75 | $1.00 | $0.15 ? $1.50 |
+| **Output Token Rate (/1M)** | $3.75 | $1.00 | $0.60 ? $6.00 |
+| **Search Request Fee** | $14.00 / 1k queries | $5.00 / 1k requests | $10.00 / 1k calls + content tokens |
+| **Free Developer Tier** | **5,000 search queries / month** | None ($0 balance rejects) | None |
+| **Citation Granularity** | High (URLs, Titles, Sentence Offsets) | Moderate (URLs array, inline `[1]`) | Moderate (Markdown URLs) |
+| **API Lifecycle Risk** | Stable (Official SDK & API) | Breaking change on Sept 27, 2026 | Stable (Responses API) |
+
+---
+
+## 4. Re-Evaluated MVP Provider Selection
+
+### **Selected MVP Provider: Google Gemini 3.8 Flash (Grounding with Google Search)**
+
+#### Documented Reasons for Selection:
+1. **5,000 Free Search Queries Monthly:** Allows us to execute up to 1,000 free 5-question scans every month with zero search grounding fees, drastically lowering initial developer and MVP operational costs.
+2. **Superior Citation Fidelity for "Why" Engine:** Gemini's `groundingMetadata` supplies page titles and sentence-level claim offsets (`groundingSupports`). This directly powers our **Citation Analysis** and **AI Claim vs. Website Evidence** engine without needing secondary scraping.
+3. **API Stability:** Perplexity is deprecating its Chat Completions API on September 27, 2026, introducing migration risks. Gemini's grounding tool interface is stable and well-supported in `@google/generative-ai`.
+4. **Architectural Isolation:** The provider interface remains completely abstract (`src/providers/types.ts`). Perplexity Sonar and OpenAI Web Search will be added to the registry as secondary adapters once the core pipeline is validated.
