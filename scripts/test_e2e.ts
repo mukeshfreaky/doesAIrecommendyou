@@ -90,16 +90,17 @@ async function runLiveEndToEndScan(targetUrl: string) {
     console.log(`\n   -> Query: "${q.question}"`);
     const aiResponse = await provider.generateResponse(q.question, systemPrompt, {
       enableSearchGrounding: enableSearch,
+      maxOutputTokens: 1200,
     });
 
     console.log(`      • Grounding Status: ${aiResponse.metadata?.searchGroundingStatus}`);
     if (aiResponse.metadata?.groundingError) {
       console.log(`        (Note: Search Grounding quota exhausted on unbilled API key; executed live model inference)`);
     }
-    console.log(`      • Grounding Searches: ${aiResponse.groundingQueries.join("; ") || "None"}`);
+    console.log(`      • Grounding Searches (${aiResponse.groundingQueries.length} executed): ${aiResponse.groundingQueries.join("; ") || "None"}`);
     console.log(`      • Citations: ${aiResponse.citations.length}`);
     console.log(`      • Tokens (In/Out): ${aiResponse.tokenUsage?.promptTokens}/${aiResponse.tokenUsage?.completionTokens}`);
-    console.log(`      • Estimated Cost: $${aiResponse.estimatedCostUSD}`);
+    console.log(`      • Estimated Cost: $${aiResponse.estimatedCostUSD.toFixed(5)} USD`);
 
     const posture = classifyPosture(profile.name, profile.domain, aiResponse.content);
     console.log(`      • Posture: ${posture.posture} (Rank: ${posture.brandRank || "N/A"})`);

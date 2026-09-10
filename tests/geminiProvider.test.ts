@@ -96,4 +96,14 @@ describe("AI Providers & Registry", () => {
     expect(res.groundingQueries).toHaveLength(0);
     expect(res.citations).toHaveLength(0);
   });
+
+  it("calculates accurate search grounding and token cost breakdown", async () => {
+    const mock = new MockProvider();
+    // Default mock uses 2 queries ($0.070), 500 prompt tokens ($0.000075), 800 completion tokens ($0.00048)
+    const res = await mock.generateResponse("What are the best tools?");
+    expect(res.groundingQueries).toHaveLength(2);
+    expect(res.metadata.searchQueriesExecuted).toBe(2);
+    expect(res.estimatedCostUSD).toBeGreaterThanOrEqual(0.07);
+    expect(res.estimatedCostUSD).toBeLessThan(0.08);
+  });
 });

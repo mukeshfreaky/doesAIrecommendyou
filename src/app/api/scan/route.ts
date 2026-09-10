@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
       const aiResponse = await provider.generateResponse(
         q.question,
         systemEvaluatorPrompt,
-        { enableSearchGrounding: true }
+        { enableSearchGrounding: true, maxOutputTokens: 1200 }
       );
 
       lastMetadata = aiResponse.metadata;
