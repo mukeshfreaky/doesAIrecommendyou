@@ -143,6 +143,31 @@ describe("Buyer Question Generator & Prompt Injection Defense", () => {
     const category = "Email Delivery & Transactional Email API";
     const audience = "developers and engineers";
 
+    it("rejects bare action verbs and verb fragments ('Integrate', 'Integrates', 'Deliver', 'Automate', 'Send')", () => {
+      expect(isValidEvaluativeAttribute("Integrate", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Integrates", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Deliver", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Automate", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Send", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Deploy", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Build", category, audience)).toBe(false);
+    });
+
+    it("rejects marketing adjectives and puffery ('First-class deliverability', 'Powerful integrations')", () => {
+      expect(isValidEvaluativeAttribute("First-class deliverability", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Powerful integrations", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("First-class developer experience", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Cutting-edge deliverability", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Instant delivery", category, audience)).toBe(false);
+    });
+
+    it("rejects action phrases starting with bare verbs ('Write using a delightful editor', 'Go beyond editing')", () => {
+      expect(isValidEvaluativeAttribute("Write using a delightful editor", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Go beyond editing", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Send broadcast emails", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Manage contacts easily", category, audience)).toBe(false);
+    });
+
     it("rejects 'Email for developers' due to slogan structure and audience/category duplication", () => {
       expect(isValidEvaluativeAttribute("Email for developers", category, audience)).toBe(false);
       expect(isValidEvaluativeAttribute("Built for developers", category, audience)).toBe(false);
@@ -177,6 +202,46 @@ describe("Buyer Question Generator & Prompt Injection Defense", () => {
       expect(isValidEvaluativeAttribute("tamper-evident audit trails", category, audience)).toBe(true);
       expect(isValidEvaluativeAttribute("security compliance", category, audience)).toBe(true);
       expect(isValidEvaluativeAttribute("webhook flexibility", category, audience)).toBe(true);
+      expect(isValidEvaluativeAttribute("integrations", category, audience)).toBe(true);
+    });
+  });
+
+  describe("validateQuestionQuality with Adversarial Candidates", () => {
+    it("rejects questions containing bare verbs or slogans in comparative slot", () => {
+      expect(
+        validateQuestionQuality(
+          "Which Email Delivery & Transactional Email API platforms offer the strongest Integrate?",
+          sampleProfile
+        ).valid
+      ).toBe(false);
+
+      expect(
+        validateQuestionQuality(
+          "Which Email Delivery & Transactional Email API platforms offer the strongest Integrates?",
+          sampleProfile
+        ).valid
+      ).toBe(false);
+
+      expect(
+        validateQuestionQuality(
+          "Which Email Delivery & Transactional Email API platforms offer the strongest First-class deliverability?",
+          sampleProfile
+        ).valid
+      ).toBe(false);
+
+      expect(
+        validateQuestionQuality(
+          "Which Email Delivery & Transactional Email API platforms offer the strongest Powerful integrations?",
+          sampleProfile
+        ).valid
+      ).toBe(false);
+
+      expect(
+        validateQuestionQuality(
+          "Which Email Delivery & Transactional Email API platforms offer the strongest Built for developers?",
+          sampleProfile
+        ).valid
+      ).toBe(false);
     });
   });
 
@@ -199,7 +264,7 @@ describe("Buyer Question Generator & Prompt Injection Defense", () => {
       expect(secFallback.question).toContain("security compliance and audit logging");
     });
 
-    it("falls back safely when extracted feature is 'Email for developers'", () => {
+    it("falls back safely when extracted features are raw website fragments from Resend", () => {
       const resendProfile: BusinessProfile = {
         name: "Resend",
         domain: "resend.com",
@@ -210,16 +275,26 @@ describe("Buyer Question Generator & Prompt Injection Defense", () => {
         targetCustomers: ["developers", "engineers"],
         industries: ["saas"],
         pricingSignals: ["$20/mo"],
-        keyFeatures: ["Email for developers"],
+        keyFeatures: [
+          "Email for developers",
+          "Integrate",
+          "First-class  developer experience",
+          "Test mode",
+          "Modular webhooks",
+          "Write using a delightful editor",
+          "Go beyond editing",
+          "Broadcast analytics",
+        ],
         useCases: ["sending transactional emails"],
         locations: [],
-        differentiators: ["Email for developers"],
+        differentiators: ["Email for developers", "fastest growing teams"],
         sourcePages: ["https://resend.com"],
       };
 
       const questions = generateBuyerQuestions(resendProfile);
       const q5 = questions.find((q) => q.category === "FEATURE_SPECIFIC");
       expect(q5).toBeDefined();
+      expect(q5?.question).not.toContain("strongest Integrate");
       expect(q5?.question).not.toContain("strongest Email for developers");
       expect(q5?.question).toContain("highest deliverability rates and API reliability");
 

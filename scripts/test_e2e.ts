@@ -102,9 +102,19 @@ async function runLiveEndToEndScan(targetUrl: string) {
     console.log(`      • Tokens (In/Out): ${aiResponse.tokenUsage?.promptTokens}/${aiResponse.tokenUsage?.completionTokens}`);
     console.log(`      • Estimated Cost: $${aiResponse.estimatedCostUSD.toFixed(5)} USD`);
 
-    const posture = classifyPosture(profile.name, profile.domain, aiResponse.content);
+    const posture = classifyPosture(profile.name, profile.domain, aiResponse.content, q.category);
+    const individualCompetitors = detectCompetitors(
+      [{ text: aiResponse.content, citations: aiResponse.citations.map((c) => c.url) }],
+      profile.name,
+      profile.domain
+    );
+
     console.log(`      • Posture: ${posture.posture} (Rank: ${posture.brandRank || "N/A"})`);
+    if (posture.alternativeRelationship) {
+      console.log(`      • Alternative Relationship: ${posture.alternativeRelationship}`);
+    }
     console.log(`      • Reason: ${posture.recommendationReason}`);
+    console.log(`      • Competitors Surfaced: ${individualCompetitors.map((c) => c.name).join(", ") || "None"}`);
     console.log(`      • Response Snippet: "${aiResponse.content.slice(0, 160).replace(/\n/g, " ")}..."`);
 
     questionResults.push({
@@ -114,12 +124,17 @@ async function runLiveEndToEndScan(targetUrl: string) {
       rationale: q.rationale,
       rawAIResponse: aiResponse.content,
       posture: posture.posture,
+      alternativeRelationship: posture.alternativeRelationship,
       brandRank: posture.brandRank,
       recommendationReason: posture.recommendationReason,
-      competitors: [],
+      competitors: individualCompetitors,
       citedSources: aiResponse.citations,
       supportingEvidence: posture.supportingEvidence,
       searchQueries: aiResponse.groundingQueries,
+      groundingStatus: aiResponse.metadata?.searchGroundingStatus,
+      tokenUsage: aiResponse.tokenUsage,
+      latencyMs: aiResponse.metadata?.latencyMs,
+      estimatedCostUSD: aiResponse.estimatedCostUSD,
     });
 
     rawResponses.push({
@@ -143,11 +158,16 @@ async function runLiveEndToEndScan(targetUrl: string) {
   // 7. Scoring
   console.log(`\n[7/8] Calculating Visibility Score Breakdown...`);
   const score = calculateVisibilityScore(questionResults);
-  console.log(`✔ Overall Score: ${score.overallScore} / 100`);
-  console.log(`   Recommendation Rate: ${score.recommendationRate}%`);
-  console.log(`   Top Recommendation Rate: ${score.topRecommendationRate}%`);
-  console.log(`   Consideration Rate: ${score.considerationRate}%`);
-  console.log(`   Cross-Provider Consistency: ${score.crossProviderConsistency !== undefined ? score.crossProviderConsistency : "undefined (VERIFIED: No fabrication on single-provider)"}`);
+  console.log(`✔ Primary AI Recommendation Score: ${score.overallScore} / 100`);
+  console.log(`   Recommendation Rate:            ${score.recommendationRate}%`);
+  console.log(`   Top Recommendation Rate:        ${score.topRecommendationRate}%`);
+  console.log(`   Consideration Rate:             ${score.considerationRate}%`);
+  console.log(`   Prospective Scenarios:          ${score.prospectiveQuestionsEvaluated} of ${score.prospectiveQuestionsTotal}`);
+  console.log(`   Is Partial Evaluation:          ${score.isPartialEvaluation}`);
+  if (score.benchmarkIndex) {
+    console.log(`✔ Benchmark Index:                 ${score.benchmarkIndex.status} (${score.benchmarkIndex.relationship}) - Score: ${score.benchmarkIndex.score}`);
+    console.log(`   Benchmark Rationale:            ${score.benchmarkIndex.rationale}`);
+  }
 
   // 8. Prescriptions
   console.log(`\n[8/8] Generating Actionable Prescriptions...`);
@@ -160,9 +180,44 @@ async function runLiveEndToEndScan(targetUrl: string) {
   );
   actionItems.forEach((item) => console.log(`   [${item.priority}] ${item.title}: ${item.expectedImpact}`));
 
+  const totalCost = questionResults.reduce((acc, q) => acc + (q.estimatedCostUSD || 0), 0);
+  const totalSearchQueries = questionResults.reduce((acc, q) => acc + (q.searchQueries?.length || 0), 0);
+  const totalInputTokens = questionResults.reduce((acc, q) => acc + (q.tokenUsage?.promptTokens || 0), 0);
+  const totalOutputTokens = questionResults.reduce((acc, q) => acc + (q.tokenUsage?.completionTokens || 0), 0);
+
   console.log(`\n=======================================================`);
   console.log(`LIVE PIPELINE EXECUTION AUDIT COMPLETE`);
   console.log(`=======================================================`);
+  console.log(`Total Live Calls:          ${questionResults.length}`);
+  console.log(`Total Search Queries:      ${totalSearchQueries}`);
+  console.log(`Total Input Tokens:        ${totalInputTokens}`);
+  console.log(`Total Output Tokens:       ${totalOutputTokens}`);
+  console.log(`Total Estimated Cost USD:  $${totalCost.toFixed(5)} USD`);
+  console.log(`Total Estimated Cost INR:  ₹${(totalCost * 84).toFixed(2)} INR`);
+  console.log(`=======================================================`);
+
+  // Save forensic report
+  const forensicReport = {
+    scanTimestamp: new Date().toISOString(),
+    targetUrl,
+    profile,
+    score,
+    totalSearchQueries,
+    totalEstimatedCostUSD: totalCost,
+    totalEstimatedCostINR: totalCost * 84,
+    questions: questionResults,
+    competitors,
+    citations,
+    actionItems,
+  };
+
+  if (process.env.SAVE_REPORT === "true") {
+    fs.writeFileSync(
+      path.resolve(process.cwd(), "resend_live_scan_report.json"),
+      JSON.stringify(forensicReport, null, 2)
+    );
+    console.log(`\nForensic scan report saved to resend_live_scan_report.json`);
+  }
 
   return { status: "SUCCESS", score, profile, questionsCount: questions.length };
 }
