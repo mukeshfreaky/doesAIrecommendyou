@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Citation } from "@/types";
 import { Globe, CheckCircle2, ExternalLink } from "lucide-react";
 
@@ -16,11 +16,11 @@ export const CitationList: React.FC<Props> = ({ citations }) => {
       <div className="flex items-center gap-2.5 mb-2">
         <Globe className="w-5 h-5 text-purple-400" />
         <h2 className="text-xl font-bold text-white tracking-tight">
-          Web Sources & Grounding Citations
+          Live Web Evidence & Citations
         </h2>
       </div>
       <p className="text-sm text-slate-400 mb-6">
-        Live web sources retrieved and cited by AI search grounding to formulate buyer recommendations.
+        Verified live web sources retrieved and analyzed to formulate objective buyer recommendations.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -52,7 +52,7 @@ export const CitationList: React.FC<Props> = ({ citations }) => {
             <div className="shrink-0 flex flex-col items-end gap-1">
               {cite.supportsBrand ? (
                 <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
-                  <CheckCircle2 className="w-3 h-3" /> Brand Cited
+                  <CheckCircle2 className="w-3 h-3" /> Brand Mentioned
                 </span>
               ) : (
                 <span className="text-[11px] text-slate-500">

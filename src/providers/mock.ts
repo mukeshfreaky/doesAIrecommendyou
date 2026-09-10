@@ -1,4 +1,4 @@
-import { Citation, ProviderMetadata } from "@/types";
+﻿import { Citation, ProviderMetadata } from "@/types";
 import { AIProvider, AIResponse, ProviderOptions } from "./types";
 
 export class MockProvider implements AIProvider {
@@ -32,7 +32,7 @@ export class MockProvider implements AIProvider {
           metadata: val.metadata || {
             providerId: this.id,
             modelId: this.modelId,
-            searchGroundingEnabled: true,
+            searchGroundingEnabled: options?.enableSearchGrounding ?? true,
             searchGroundingStatus: "GROUNDED",
             searchQueriesExecuted: 1,
             estimatedCostUSD: 0.035,
@@ -40,6 +40,50 @@ export class MockProvider implements AIProvider {
           },
         };
       }
+    }
+
+    // If Architecture C evidence evaluator prompt is provided (enableSearchGrounding: false and EVALUATION EVIDENCE in prompt):
+    if (options?.enableSearchGrounding === false && prompt.includes("EVALUATION EVIDENCE:")) {
+      const jsonContent = JSON.stringify({
+        posture: "TOP_RECOMMENDATION",
+        brandRank: 1,
+        recommendationReason: "Recommended based on verified benchmark performance and developer deliverability in retrieved evidence.",
+        competitors: [
+          {
+            name: "SendGrid",
+            evidenceIds: ["EVIDENCE_1"]
+          },
+          {
+            name: "Postmark",
+            evidenceIds: ["EVIDENCE_2"]
+          }
+        ],
+        claims: [
+          {
+            claim: "High transactional email deliverability and developer-first API reliability.",
+            evidenceIds: ["EVIDENCE_1", "EVIDENCE_2"]
+          }
+        ]
+      });
+
+      return {
+        content: jsonContent,
+        citations: [],
+        groundingQueries: [],
+        tokenUsage: { promptTokens: 150, completionTokens: 80, totalTokens: 230 },
+        estimatedCostUSD: 0.0001,
+        metadata: {
+          providerId: this.id,
+          modelId: this.modelId,
+          searchGroundingEnabled: false,
+          searchGroundingStatus: "EVIDENCE_BACKED",
+          searchQueriesExecuted: 0,
+          inputTokens: 150,
+          outputTokens: 80,
+          estimatedCostUSD: 0.0001,
+          latencyMs: 95,
+        },
+      };
     }
 
     // Default mock response with citations and search queries
@@ -71,7 +115,7 @@ export class MockProvider implements AIProvider {
       metadata: {
         providerId: this.id,
         modelId: this.modelId,
-        searchGroundingEnabled: true,
+        searchGroundingEnabled: options?.enableSearchGrounding ?? true,
         searchGroundingStatus: "GROUNDED",
         searchQueriesExecuted: 2,
         inputTokens: 120,

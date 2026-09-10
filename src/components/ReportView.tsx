@@ -56,6 +56,9 @@ export const ReportView: React.FC<Props> = ({ report, onReset }) => {
     (q) => q.posture === "NOT_MENTIONED"
   ).length;
 
+  const isEvidenceBacked = report.providerMetadata.searchGroundingStatus === "EVIDENCE_BACKED" ||
+    report.questionResults.some((q) => q.evidenceStatus === "EVIDENCE_BACKED");
+
   return (
     <div className="w-full max-w-5xl mx-auto space-y-10 animate-in fade-in duration-500 pb-16">
       {/* Top Header */}
@@ -76,7 +79,7 @@ export const ReportView: React.FC<Props> = ({ report, onReset }) => {
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1.5">
-            Diagnostic evaluated on {new Date(report.generatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} • Grounding: {report.providerMetadata.searchGroundingStatus === "GROUNDED" ? "Live Web Search Grounded" : "Parametric Evaluation"}
+            Diagnostic evaluated on {new Date(report.generatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} • {isEvidenceBacked ? "We checked live web evidence and asked AI to evaluate what it shows." : "Parametric Evaluation"}
           </p>
         </div>
 
@@ -103,7 +106,7 @@ export const ReportView: React.FC<Props> = ({ report, onReset }) => {
           </h2>
         </div>
         <p className="text-sm text-slate-400 mb-5">
-          Observed findings from live AI assistant evaluation across realistic commercial search queries.
+          Observed findings from live web evidence and AI evaluation across realistic commercial search queries.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
@@ -148,94 +151,114 @@ export const ReportView: React.FC<Props> = ({ report, onReset }) => {
           <h2 className="text-xl font-bold text-white tracking-tight">
             Where does AI recommend you?
           </h2>
-          <p className="text-sm text-slate-400">
-            Detailed breakdown across {report.questionResults.length} realistic buyer scenarios asked to AI assistants.
+          <p className="text-sm text-slate-400 mt-1">
+            Buyer scenarios tested against live web evidence.
           </p>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {report.questionResults.map((result, idx) => (
-            <QuestionCard key={result.questionId} result={result} index={idx} />
+            <QuestionCard key={result.questionId || idx} result={result} index={idx} />
           ))}
         </div>
       </div>
 
-      {/* 4. COMPETITORS: Who is AI comparing you with? */}
-      <CompetitorTable competitors={report.competitors} />
-
-      {/* 5. PRESCRIBE: What should you improve? */}
-      <PrescriptionList items={report.actionItems} />
-
-      {/* 6. SOURCES: Web Sources & Citations */}
-      <CitationList
-        citations={report.questionResults.flatMap((r) => r.citedSources)}
+      {/* 4. BENCHMARK: Competitors Surfaced */}
+      <CompetitorTable
+        competitors={report.competitors}
       />
 
-      {/* 7. IMPROVEMENT LOOP: You know what AI thinks. Now improve it. */}
-      <div className="rounded-2xl border border-blue-900/60 bg-gradient-to-br from-blue-950/40 via-slate-900/80 to-slate-900/60 p-6 md:p-8">
-        <div className="flex items-center gap-2.5 mb-2">
-          <TrendingUp className="w-5 h-5 text-blue-400" />
-          <h2 className="text-xl font-bold text-white tracking-tight">
-            You know what AI thinks of you. Now improve it.
-          </h2>
-        </div>
-        <p className="text-sm text-slate-300 max-w-2xl mb-6 leading-relaxed">
-          Update your website, comparison pages, and technical documentation with the recommended fixes above. Then verify if AI assistants recommend your business more frequently.
-        </p>
+      {/* 5. GROUNDING CITATIONS: Real Web Sources */}
+      {report.questionResults.some((q) => q.citedSources && q.citedSources.length > 0) && (
+        <CitationList
+          citations={report.questionResults.flatMap((q) => q.citedSources)}
+        />
+      )}
 
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={handleResetAction}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 transition-all"
-          >
-            <RefreshCw className="w-4 h-4" /> See if my changes work
-          </button>
+      {/* 6. PRESCRIBE: Action Items to Win AI Recommendations */}
+      <PrescriptionList items={report.actionItems} />
+
+      {/* 7. RE-CHECK CADENCE & RETENTION HOOK */}
+      <div className="rounded-2xl border border-blue-900/40 bg-gradient-to-br from-blue-950/40 to-indigo-950/20 p-6 md:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-blue-400 font-semibold text-sm">
+            <RefreshCw className="w-4 h-4" /> Recommended Re-audit Cadence
+          </div>
+          <h3 className="text-lg font-bold text-white">
+            AI rankings change continuously as new web reviews are indexed.
+          </h3>
+          <p className="text-xs text-slate-400 max-w-xl">
+            Track whether your search visibility improves after publishing new comparison pages or migration guides.
+          </p>
+        </div>
+
+        <div className="shrink-0 flex items-center gap-3">
           <button
             onClick={() => setNotifyModalOpen(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors"
+            className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors flex items-center gap-2 shadow-lg shadow-blue-600/20"
           >
-            <Bell className="w-4 h-4 text-slate-400" /> Track my AI visibility
+            <Bell className="w-3.5 h-3.5" /> Re-check in 30 Days
           </button>
         </div>
-
-        {notifyModalOpen && (
-          <div className="mt-4 p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
-            <span>
-              Tracking notifications configured. You will receive updates when AI recommendation posture changes for {report.domain}.
-            </span>
-            <button
-              onClick={() => setNotifyModalOpen(false)}
-              className="text-blue-400 hover:underline ml-4"
-            >
-              Dismiss
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* 8. PROGRESSIVE DISCLOSURE: Technical & Audit Details */}
-      <div className="rounded-2xl border border-slate-800/80 bg-slate-950/50">
+      {/* Re-check modal simulated notification */}
+      {notifyModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-950 border border-blue-800 flex items-center justify-center text-blue-400">
+                <Bell className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-base font-bold text-white">Re-audit Reminder</h4>
+                <p className="text-xs text-slate-400">Bookmark this diagnostic report</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              We recommend re-running this scan in 30 days after implementing the recommended comparison pages. Save this report URL to track your benchmark score progress over time.
+            </p>
+            <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between">
+              <span className="text-xs font-mono text-slate-400 truncate max-w-[260px]">
+                {typeof window !== "undefined" ? window.location.href : ""}
+              </span>
+              <button
+                onClick={handleCopyLink}
+                className="text-xs text-blue-400 hover:underline shrink-0"
+              >
+                {copied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setNotifyModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 8. Progressive Disclosure: Crawl & Telemetry */}
+      <div className="border border-slate-800/80 rounded-2xl bg-slate-950/40 overflow-hidden">
         <button
           onClick={() => setTechDetailsOpen(!techDetailsOpen)}
-          className="w-full p-5 flex items-center justify-between text-left text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors"
+          className="w-full px-6 py-4 flex items-center justify-between text-xs font-medium text-slate-400 hover:text-slate-200 transition-colors"
         >
           <span className="flex items-center gap-2">
-            <Cpu className="w-4 h-4 text-slate-500" /> Technical Telemetry & Grounding Audit
+            <Layers className="w-4 h-4 text-slate-500" />
+            Technical Telemetry & Crawl Provenance
           </span>
-          <span className="flex items-center gap-1 text-slate-500 font-normal">
-            {techDetailsOpen ? "Hide Details" : "Show Details"}
-            {techDetailsOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-          </span>
+          {techDetailsOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
 
         {techDetailsOpen && (
-          <div className="p-6 pt-0 border-t border-slate-800/60 grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-slate-400 mt-4">
-            {/* Business Evidence Extracted */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 font-semibold text-white">
-                <Layers className="w-3.5 h-3.5 text-blue-400" />
-                Crawled Business Evidence
-              </div>
+          <div className="px-6 pb-6 pt-2 border-t border-slate-800/80 space-y-4 text-xs text-slate-400">
+            {/* Business Profile Metadata */}
+            <div className="space-y-1.5">
+              <div className="font-semibold text-white">Extracted Business Profile:</div>
               <div>
                 <span className="text-slate-500 font-medium">Pages Crawled:</span>{" "}
                 {report.evidence.crawledPagesCount} pages ({report.evidence.sourcePages.join(", ")})
@@ -254,26 +277,34 @@ export const ReportView: React.FC<Props> = ({ report, onReset }) => {
               </div>
             </div>
 
-            {/* Provider Grounding Telemetry */}
+            {/* Provider & Retrieval Telemetry */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 font-semibold text-white">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                Grounding & Model Telemetry
+                Dedicated Retrieval & Evaluator Telemetry (Architecture C)
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <span className="text-slate-500 font-medium">Model:</span>{" "}
+                  <span className="text-slate-500 font-medium">Retrieval Provider:</span>{" "}
+                  <span className="font-mono text-slate-300">{report.providerMetadata.retrievalProvider || "Tavily Search API"}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-medium">Evaluator Model:</span>{" "}
                   <span className="font-mono text-slate-300">{report.providerMetadata.modelId}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 font-medium">Grounding Status:</span>{" "}
-                  <span className={report.providerMetadata.searchGroundingStatus === "GROUNDED" ? "text-emerald-400 font-semibold" : "text-amber-400 font-semibold"}>
+                  <span className="text-slate-500 font-medium">Evidence Status:</span>{" "}
+                  <span className={isEvidenceBacked ? "text-emerald-400 font-semibold" : "text-amber-400 font-semibold"}>
                     {report.providerMetadata.searchGroundingStatus}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 font-medium">Search Queries:</span>{" "}
-                  {report.providerMetadata.searchQueriesExecuted} executed
+                  <span className="text-slate-500 font-medium">Retrieval Searches:</span>{" "}
+                  {report.providerMetadata.retrievalQueriesExecuted || report.questions.length} queries
+                </div>
+                <div>
+                  <span className="text-slate-500 font-medium">Native Gemini Search:</span>{" "}
+                  <span className="text-slate-300 font-mono">0 (Disabled)</span>
                 </div>
                 <div>
                   <span className="text-slate-500 font-medium">Latency:</span>{" "}
@@ -281,17 +312,17 @@ export const ReportView: React.FC<Props> = ({ report, onReset }) => {
                 </div>
                 <div>
                   <span className="text-slate-500 font-medium">Tokens:</span>{" "}
-                  {report.providerMetadata.inputTokens} in / {report.providerMetadata.outputTokens} out
+                  {report.providerMetadata.inputTokens || 0} in / {report.providerMetadata.outputTokens || 0} out
                 </div>
                 <div>
                   <span className="text-slate-500 font-medium">Estimated Cost:</span>{" "}
-                  ${report.providerMetadata.estimatedCostUSD.toFixed(4)} USD
+                  ${(report.providerMetadata.estimatedCostUSD || 0).toFixed(4)} USD
                 </div>
               </div>
               <p className="text-[11px] text-slate-500 italic pt-1 border-t border-slate-800/80">
-                {report.providerMetadata.searchGroundingStatus === "GROUNDED"
-                  ? "Verified with live web search grounding. Zero fabricated citations."
-                  : "Evaluated from model parametric knowledge without search queries. Zero fabricated citations."}
+                {isEvidenceBacked
+                  ? "We checked live web evidence and asked AI to evaluate what it shows. Zero native search calls, zero fabricated citations."
+                  : "Evaluated from model parametric knowledge. Zero fabricated citations."}
               </p>
             </div>
           </div>

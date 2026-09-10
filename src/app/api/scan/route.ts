@@ -1,10 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { crawlWebsite, normalizeTargetUrl } from "@/crawler/crawler";
 import { validateTargetUrl } from "@/crawler/ssrfValidator";
 import { extractBusinessProfile } from "@/crawler/extractor";
-import { generateBuyerQuestions, formatDelimitedEvidence, SYSTEM_EVALUATOR_INSTRUCTION } from "@/generator/questionGenerator";
+import { generateBuyerQuestions } from "@/generator/questionGenerator";
 import { getProvider } from "@/providers/registry";
-import { classifyPosture } from "@/analysis/postureClassifier";
+import { getWebRetriever } from "@/retrieval";
+import {
+  SYSTEM_EVIDENCE_EVALUATOR_INSTRUCTION,
+  formatRetrievedEvidenceDelimiters,
+  validateAndResolveEvaluatorOutput,
+} from "@/analysis/evidenceEvaluator";
 import { detectCompetitors } from "@/analysis/competitorDetector";
 import { aggregateCitations } from "@/analysis/citationAnalyzer";
 import { calculateVisibilityScore } from "@/scoring/scoringEngine";
@@ -120,59 +125,130 @@ export async function POST(req: NextRequest) {
     // 7. Generate 5 Neutral Buyer Questions
     const questions = generateBuyerQuestions(businessProfile);
 
-    // 8. Provider Check
+    // 8. Provider & Retriever Readiness Check
     const provider = getProvider();
     if (!provider.isConfigured()) {
       return NextResponse.json(
         {
           error:
-            "Provider configuration error: GEMINI_API_KEY is not configured on the server. Please add your GEMINI_API_KEY to .env.local to execute live grounded scans.",
+            "Provider configuration error: AI provider API key is not configured on the server. Please check server environment configuration.",
           code: "PROVIDER_ERROR",
         },
         { status: 503 }
       );
     }
 
-    // 9. Execute Grounded Evaluation for each question
+    const retriever = getWebRetriever();
+
+    // 9. Execute Architecture C Pipeline (Dedicated Web Retrieval -> Evidence-Bound Evaluator)
     const questionResults: QuestionResult[] = [];
     const rawResponsesForCompetitors: Array<{ text: string; citations?: string[] }> = [];
-    let totalSearchQueries = 0;
+    let totalRetrievalQueries = 0;
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     let totalEstimatedCost = 0;
-    let lastMetadata: ProviderMetadata | undefined;
+    let totalRetrievalLatencyMs = 0;
+    let totalEvaluationLatencyMs = 0;
+    let evidenceBackedCount = 0;
     const startOverallTime = Date.now();
 
-    const delimitedEvidence = formatDelimitedEvidence(businessProfile);
-    const systemEvaluatorPrompt = `${SYSTEM_EVALUATOR_INSTRUCTION}\n\nBUSINESS EVIDENCE REFERENCE (UNTRUSTED DATA):\n${delimitedEvidence}`;
-
     for (const q of questions) {
-      const aiResponse = await provider.generateResponse(
-        q.question,
-        systemEvaluatorPrompt,
-        { enableSearchGrounding: true, maxOutputTokens: 1200 }
-      );
+      // 9a. Retrieve live web evidence via Tavily
+      totalRetrievalQueries++;
+      const retrievalResult = await retriever.retrieve(q.question, {
+        maxResults: 5,
+        timeoutMs: 10000,
+        searchDepth: "basic",
+      });
 
-      lastMetadata = aiResponse.metadata;
-      totalSearchQueries += aiResponse.groundingQueries.length;
+      totalRetrievalLatencyMs += retrievalResult.latencyMs;
+
+      if (!retrievalResult.success || retrievalResult.evidence.length === 0) {
+        // Retrieval failed or yielded 0 usable results - truthful fallback
+        questionResults.push({
+          questionId: q.id,
+          category: q.category,
+          question: q.question,
+          rationale: q.rationale,
+          rawAIResponse: "",
+          posture: "NOT_MENTIONED",
+          brandRank: null,
+          recommendationReason: "Live web evidence could not be retrieved for this question.",
+          competitors: [],
+          citedSources: [],
+          supportingEvidence: [],
+          searchQueries: [q.question],
+          evidenceStatus: "RETRIEVAL_FAILED",
+          retrievedEvidence: [],
+          claims: [],
+        });
+        continue;
+      }
+
+      // 9b. Format delimited evidence for Gemini
+      const delimitedEvidence = formatRetrievedEvidenceDelimiters(retrievalResult.evidence);
+      const evalPrompt = `Evaluate the following commercial software buyer query for target brand "${businessProfile.name}" (${businessProfile.domain}):
+
+Buyer Question: "${q.question}"
+
+EVALUATION EVIDENCE:
+${delimitedEvidence}`;
+
+      // 9c. Call Gemini evaluator with native search grounding DISABLED
+      const evalStartTime = Date.now();
+      let aiResponse;
+      try {
+        aiResponse = await provider.generateResponse(
+          evalPrompt,
+          SYSTEM_EVIDENCE_EVALUATOR_INSTRUCTION,
+          {
+            enableSearchGrounding: false,
+            maxOutputTokens: 1200,
+            temperature: 0.1,
+          }
+        );
+      } catch (err: any) {
+        const evalLatency = Date.now() - evalStartTime;
+        totalEvaluationLatencyMs += evalLatency;
+        questionResults.push({
+          questionId: q.id,
+          category: q.category,
+          question: q.question,
+          rationale: q.rationale,
+          rawAIResponse: "",
+          posture: "NOT_MENTIONED",
+          brandRank: null,
+          recommendationReason: `Evaluator error: ${err.message || String(err)}`,
+          competitors: [],
+          citedSources: [],
+          supportingEvidence: [],
+          searchQueries: [q.question],
+          evidenceStatus: "EVALUATION_FAILED",
+          retrievedEvidence: retrievalResult.evidence,
+          claims: [],
+        });
+        continue;
+      }
+
+      const evalLatency = Date.now() - evalStartTime;
+      totalEvaluationLatencyMs += evalLatency;
+
       totalInputTokens += aiResponse.tokenUsage?.promptTokens || 0;
       totalOutputTokens += aiResponse.tokenUsage?.completionTokens || 0;
       totalEstimatedCost += aiResponse.estimatedCostUSD;
 
-      // Classify posture with intent awareness
-      const postureResult = classifyPosture(
+      // 9d. Validate structured response & resolve authoritative citations
+      const validation = validateAndResolveEvaluatorOutput(
+        aiResponse.content,
+        retrievalResult.evidence,
         businessProfile.name,
         businessProfile.domain,
-        aiResponse.content,
         q.category
       );
 
-      // Extract competitors from this individual response
-      const individualCompetitors = detectCompetitors(
-        [{ text: aiResponse.content, citations: aiResponse.citations.map((c) => c.url) }],
-        businessProfile.name,
-        businessProfile.domain
-      );
+      if (validation.status === "EVIDENCE_BACKED") {
+        evidenceBackedCount++;
+      }
 
       questionResults.push({
         questionId: q.id,
@@ -180,19 +256,21 @@ export async function POST(req: NextRequest) {
         question: q.question,
         rationale: q.rationale,
         rawAIResponse: aiResponse.content,
-        posture: postureResult.posture,
-        alternativeRelationship: postureResult.alternativeRelationship,
-        brandRank: postureResult.brandRank,
-        recommendationReason: postureResult.recommendationReason,
-        competitors: individualCompetitors,
-        citedSources: aiResponse.citations,
-        supportingEvidence: postureResult.supportingEvidence,
-        searchQueries: aiResponse.groundingQueries,
+        posture: validation.posture,
+        brandRank: validation.brandRank,
+        recommendationReason: validation.recommendationReason,
+        competitors: validation.competitors,
+        citedSources: validation.citations,
+        supportingEvidence: validation.supportingEvidence,
+        searchQueries: [q.question],
+        evidenceStatus: validation.status,
+        retrievedEvidence: retrievalResult.evidence,
+        claims: validation.claims,
       });
 
       rawResponsesForCompetitors.push({
         text: aiResponse.content,
-        citations: aiResponse.citations.map((c) => c.url),
+        citations: validation.citations.map((c) => c.url),
       });
     }
 
@@ -205,7 +283,7 @@ export async function POST(req: NextRequest) {
       businessProfile.domain
     );
 
-    // 11. Cross-question citation aggregation
+    // 11. Cross-question citation aggregation (preserving URL provenance)
     const allCitations = aggregateCitations(
       questionResults.map((r) => r.citedSources),
       businessProfile.domain,
@@ -224,7 +302,19 @@ export async function POST(req: NextRequest) {
       businessProfile
     );
 
-    // 14. Assemble Final ScanReport
+    // 14. Determine authoritative grounding status
+    let searchGroundingStatus: ProviderMetadata["searchGroundingStatus"] = "UNGROUNDED";
+    if (evidenceBackedCount === questions.length) {
+      searchGroundingStatus = "EVIDENCE_BACKED";
+    } else if (evidenceBackedCount > 0) {
+      searchGroundingStatus = "EVIDENCE_BACKED";
+    } else if (questionResults.some((q) => q.evidenceStatus === "RETRIEVAL_FAILED")) {
+      searchGroundingStatus = "RETRIEVAL_FAILED";
+    } else if (questionResults.some((q) => q.evidenceStatus === "EVALUATION_FAILED")) {
+      searchGroundingStatus = "EVALUATION_FAILED";
+    }
+
+    // 15. Assemble Final ScanReport
     const scanId = `scan_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     const report: ScanReport = {
       scanId,
@@ -242,13 +332,14 @@ export async function POST(req: NextRequest) {
       providerMetadata: {
         providerId: provider.id,
         modelId: provider.modelId,
-        searchGroundingEnabled: lastMetadata?.searchGroundingEnabled ?? true,
-        searchGroundingStatus:
-          totalSearchQueries > 0 || questionResults.some((q) => q.citedSources.length > 0)
-            ? "GROUNDED"
-            : "UNGROUNDED",
-        groundingError: lastMetadata?.groundingError,
-        searchQueriesExecuted: totalSearchQueries,
+        searchGroundingEnabled: false, // Architecture C: Gemini native search disabled
+        searchGroundingStatus,
+        searchQueriesExecuted: 0, // 0 native Gemini search queries
+        retrievalProvider: retriever.id,
+        retrievalQueriesExecuted: totalRetrievalQueries,
+        evidenceBackedCount,
+        retrievalLatencyMs: totalRetrievalLatencyMs,
+        evaluationLatencyMs: totalEvaluationLatencyMs,
         inputTokens: totalInputTokens,
         outputTokens: totalOutputTokens,
         estimatedCostUSD: Number(totalEstimatedCost.toFixed(5)),

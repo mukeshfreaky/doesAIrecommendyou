@@ -1,4 +1,4 @@
-// Core domain types for Does AI Recommend You? (Phase 1)
+﻿// Core domain types for Does AI Recommend You? (Architecture C: Dedicated Web Evidence Retrieval)
 
 export type RecommendationPosture =
   | "TOP_RECOMMENDATION"
@@ -89,6 +89,26 @@ export type AlternativeRelationship =
   | "DEFENDED"
   | "DISPLACED";
 
+export interface EvidenceClaim {
+  claim: string;
+  evidenceIds: string[];
+}
+
+export interface NormalizedWebEvidenceItem {
+  id: string;
+  title: string;
+  url: string;
+  domain: string;
+  snippet: string;
+  retrievedAt: string;
+}
+
+export type QuestionEvidenceStatus =
+  | "EVIDENCE_BACKED"
+  | "RETRIEVAL_FAILED"
+  | "EVALUATION_FAILED"
+  | "UNGROUNDED";
+
 export interface QuestionResult {
   questionId: string;
   category: IntentCategory;
@@ -97,12 +117,15 @@ export interface QuestionResult {
   rawAIResponse: string;
   posture: RecommendationPosture;
   alternativeRelationship?: AlternativeRelationship;
-  brandRank?: number;
+  brandRank?: number | null;
   recommendationReason: string;
   competitors: CompetitorMention[];
   citedSources: Citation[];
   supportingEvidence: string[];
   searchQueries: string[];
+  evidenceStatus?: QuestionEvidenceStatus;
+  retrievedEvidence?: NormalizedWebEvidenceItem[];
+  claims?: EvidenceClaim[];
 }
 
 export interface BenchmarkIndexBreakdown {
@@ -125,11 +148,12 @@ export interface VisibilityScoreBreakdown {
   crossProviderConsistency?: number; // 0 - 100%
   supportingCitationCount?: number;
   totalQuestionsEvaluated: number;
-  prospectiveQuestionsEvaluated?: number; // Number of prospective questions evaluated (e.g. 4)
-  prospectiveQuestionsTotal?: number; // Total expected prospective questions (default 4)
-  benchmarkIndex?: BenchmarkIndexBreakdown; // Separate authority metric from ALTERNATIVES
-  isPartialEvaluation?: boolean; // True if prospective evaluations < prospectiveQuestionsTotal
+  prospectiveQuestionsEvaluated?: number;
+  prospectiveQuestionsTotal?: number;
+  benchmarkIndex?: BenchmarkIndexBreakdown;
+  isPartialEvaluation?: boolean;
 }
+
 export interface ActionItem {
   id: string;
   category:
@@ -145,14 +169,27 @@ export interface ActionItem {
   rationale: string;
 }
 
+export type ProviderGroundingStatus =
+  | "EVIDENCE_BACKED"
+  | "RETRIEVAL_FAILED"
+  | "EVALUATION_FAILED"
+  | "GROUNDED"
+  | "UNGROUNDED"
+  | "QUOTA_EXHAUSTED"
+  | "ERROR";
 
 export interface ProviderMetadata {
   providerId: string;
   modelId: string;
   searchGroundingEnabled: boolean;
-  searchGroundingStatus: "GROUNDED" | "UNGROUNDED" | "QUOTA_EXHAUSTED" | "ERROR";
+  searchGroundingStatus: ProviderGroundingStatus;
   groundingError?: string;
   searchQueriesExecuted: number;
+  retrievalProvider?: string;
+  retrievalQueriesExecuted?: number;
+  evidenceBackedCount?: number;
+  retrievalLatencyMs?: number;
+  evaluationLatencyMs?: number;
   inputTokens?: number;
   outputTokens?: number;
   estimatedCostUSD: number;
@@ -183,6 +220,7 @@ export type ScanErrorCode =
   | "NO_BUSINESS_CONTENT"
   | "PROVIDER_ERROR"
   | "GROUNDING_ERROR"
+  | "RETRIEVAL_ERROR"
   | "CLASSIFICATION_ERROR"
   | "RATE_LIMIT_EXCEEDED"
   | "INTERNAL_ERROR";
