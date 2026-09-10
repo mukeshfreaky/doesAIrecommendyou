@@ -239,4 +239,98 @@ describe("Architecture C: Evidence-Bound Evaluator & Security Unit Tests", () =>
     expect(result.status).toBe("EVALUATION_FAILED");
     expect(result.error).toContain("snippet is empty or unsupported");
   });
+
+  // Test P: Deterministic lexical check rejects completely fabricated claim with real evidence ID
+  it("Test P: rejects evaluation when claim has zero lexical or entity overlap with referenced snippet", () => {
+    const rawOutput = JSON.stringify({
+      posture: "TOP_RECOMMENDATION",
+      brandRank: 1,
+      recommendationReason: "Resend is leading in autonomous drone navigation.",
+      competitors: [],
+      claims: [
+        {
+          claim: "Resend features real-time autonomous drone flight planning algorithms.",
+          evidenceIds: ["EVIDENCE_1"],
+        },
+      ],
+    });
+
+    const result = validateAndResolveEvaluatorOutput(
+      rawOutput,
+      mockEvidenceList,
+      "Resend",
+      "resend.com"
+    );
+
+    expect(result.status).toBe("EVALUATION_FAILED");
+    expect(result.error).toContain("is not supported by the content in evidence");
+  });
+
+  // Test Q: Deterministic lexical check rejects hallucinated competitor mention
+  it("Test Q: rejects evaluation when competitor is not mentioned in referenced evidence", () => {
+    const rawOutput = JSON.stringify({
+      posture: "TOP_RECOMMENDATION",
+      brandRank: 1,
+      recommendationReason: "Resend and FakeUnicorn compete.",
+      competitors: [
+        {
+          name: "FakeUnicornPlatform",
+          evidenceIds: ["EVIDENCE_1"],
+        },
+      ],
+      claims: [
+        {
+          claim: "Resend delivers React templates.",
+          evidenceIds: ["EVIDENCE_1"],
+        },
+      ],
+    });
+
+    const result = validateAndResolveEvaluatorOutput(
+      rawOutput,
+      mockEvidenceList,
+      "Resend",
+      "resend.com"
+    );
+
+    expect(result.status).toBe("EVALUATION_FAILED");
+    expect(result.error).toContain('Competitor "FakeUnicornPlatform" is not mentioned in evidence');
+  });
+
+  // Test R: Enforces compact schema limits (max 3 claims, max 3 competitors, character truncation)
+  it("Test R: enforces compact schema limits on competitors, claims, and reason length", () => {
+    const veryLongReason = "A".repeat(200);
+    const veryLongClaim = "Resend deliverability " + "B".repeat(200);
+
+    const rawOutput = JSON.stringify({
+      posture: "TOP_RECOMMENDATION",
+      brandRank: 1,
+      recommendationReason: veryLongReason,
+      competitors: [
+        { name: "Mailtrap", evidenceIds: ["EVIDENCE_1"] },
+        { name: "SendGrid", evidenceIds: ["EVIDENCE_1"] },
+        { name: "Postmark", evidenceIds: ["EVIDENCE_2"] },
+        { name: "IgnoredExtraCompetitor", evidenceIds: ["EVIDENCE_2"] },
+      ],
+      claims: [
+        { claim: veryLongClaim, evidenceIds: ["EVIDENCE_1"] },
+        { claim: "Postmark transactional deliverability.", evidenceIds: ["EVIDENCE_2"] },
+        { claim: "Resend React templates.", evidenceIds: ["EVIDENCE_1"] },
+        { claim: "Extra 4th claim.", evidenceIds: ["EVIDENCE_1"] },
+      ],
+    });
+
+    const result = validateAndResolveEvaluatorOutput(
+      rawOutput,
+      mockEvidenceList,
+      "Resend",
+      "resend.com"
+    );
+
+    expect(result.status).toBe("EVIDENCE_BACKED");
+    expect(result.recommendationReason.length).toBeLessThanOrEqual(160);
+    expect(result.competitors.length).toBe(3);
+    expect(result.claims.length).toBe(3);
+    expect(result.claims[0].claim.length).toBeLessThanOrEqual(160);
+  });
 });

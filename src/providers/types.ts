@@ -10,6 +10,7 @@ export interface ProviderOptions {
   temperature?: number;
   enableSearchGrounding?: boolean;
   maxOutputTokens?: number;
+  responseMimeType?: string;
 }
 
 export interface RawGroundingChunk {

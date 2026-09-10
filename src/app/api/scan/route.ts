@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { crawlWebsite, normalizeTargetUrl } from "@/crawler/crawler";
 import { validateTargetUrl } from "@/crawler/ssrfValidator";
 import { extractBusinessProfile } from "@/crawler/extractor";
@@ -205,6 +205,7 @@ ${delimitedEvidence}`;
             enableSearchGrounding: false,
             maxOutputTokens: 1200,
             temperature: 0.1,
+            responseMimeType: "application/json",
           }
         );
       } catch (err: any) {

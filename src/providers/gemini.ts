@@ -52,6 +52,9 @@ export class GeminiProvider implements AIProvider {
     if (options?.maxOutputTokens !== undefined) {
       config.maxOutputTokens = options.maxOutputTokens;
     }
+    if (options?.responseMimeType) {
+      config.responseMimeType = options.responseMimeType;
+    }
     if (enableSearch) {
       config.tools = [{ googleSearch: {} }];
     }
