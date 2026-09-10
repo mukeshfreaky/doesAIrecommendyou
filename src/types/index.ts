@@ -83,6 +83,12 @@ export interface CompetitorMention {
   supportingCitations: string[];
 }
 
+export type AlternativeRelationship =
+  | "NOT_APPLICABLE"
+  | "BENCHMARK"
+  | "DEFENDED"
+  | "DISPLACED";
+
 export interface QuestionResult {
   questionId: string;
   category: IntentCategory;
@@ -90,6 +96,7 @@ export interface QuestionResult {
   rationale: string;
   rawAIResponse: string;
   posture: RecommendationPosture;
+  alternativeRelationship?: AlternativeRelationship;
   brandRank?: number;
   recommendationReason: string;
   competitors: CompetitorMention[];
@@ -98,14 +105,30 @@ export interface QuestionResult {
   searchQueries: string[];
 }
 
+export interface BenchmarkIndexBreakdown {
+  status:
+    | "ESTABLISHED_BENCHMARK"
+    | "RECOGNIZED_ALTERNATIVE"
+    | "DISPLACED_INCUMBENT"
+    | "UNRECOGNIZED"
+    | "NOT_EVALUATED";
+  relationship: AlternativeRelationship;
+  score: number; // 0 - 100
+  rationale: string;
+}
+
 export interface VisibilityScoreBreakdown {
-  overallScore: number; // 0 - 100
+  overallScore: number; // 0 - 100 (Primary prospective AI Recommendation Score)
   recommendationRate: number; // 0 - 100%
   topRecommendationRate: number; // 0 - 100%
   considerationRate: number; // 0 - 100%
   crossProviderConsistency?: number; // 0 - 100%
   supportingCitationCount?: number;
   totalQuestionsEvaluated: number;
+  prospectiveQuestionsEvaluated?: number; // Number of prospective questions evaluated (e.g. 4)
+  prospectiveQuestionsTotal?: number; // Total expected prospective questions (default 4)
+  benchmarkIndex?: BenchmarkIndexBreakdown; // Separate authority metric from ALTERNATIVES
+  isPartialEvaluation?: boolean; // True if prospective evaluations < prospectiveQuestionsTotal
 }
 export interface ActionItem {
   id: string;

@@ -1,6 +1,7 @@
 import { AIProvider } from "./types";
 import { GeminiProvider } from "./gemini";
 import { MockProvider } from "./mock";
+import { OpenAIProvider } from "./openai";
 
 /**
  * Returns the requested AI provider.
@@ -13,12 +14,23 @@ export function getProvider(providerId?: string): AIProvider {
     return new MockProvider();
   }
 
-  // Production and live pipeline always use real Google Gemini provider
+  // OpenAI provider via Experiential gateway
+  if (
+    providerId === "openai" ||
+    providerId === "gpt-5.6-luna" ||
+    (!providerId && process.env.DEFAULT_PROVIDER === "openai") ||
+    (!providerId && process.env.DEFAULT_PROVIDER === "gpt-5.6-luna")
+  ) {
+    return new OpenAIProvider(providerId === "gpt-5.6-luna" ? "gpt-5.6-luna" : undefined);
+  }
+
+  // Production and live pipeline default to Google Gemini provider
   return new GeminiProvider();
 }
 
 export function getAllSupportedProviders(): Array<{ id: string; name: string; isConfigured: boolean }> {
   const gemini = new GeminiProvider();
+  const openai = new OpenAIProvider();
   return [
     {
       id: gemini.id,
@@ -27,8 +39,8 @@ export function getAllSupportedProviders(): Array<{ id: string; name: string; is
     },
     {
       id: "openai",
-      name: "OpenAI ChatGPT Search (Planned Phase 2)",
-      isConfigured: false,
+      name: openai.name,
+      isConfigured: openai.isConfigured(),
     },
     {
       id: "perplexity",
@@ -37,3 +49,4 @@ export function getAllSupportedProviders(): Array<{ id: string; name: string; is
     },
   ];
 }
+

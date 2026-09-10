@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { QuestionResult } from "@/types";
 import { PostureBadge } from "./PostureBadge";
-import { ChevronDown, ChevronUp, Search, ExternalLink } from "lucide-react";
+import { ChevronDown, ChevronUp, Globe, Search, ExternalLink, Users } from "lucide-react";
 
 interface Props {
   result: QuestionResult;
@@ -12,18 +12,28 @@ interface Props {
 
 export const QuestionCard: React.FC<Props> = ({ result, index }) => {
   const [expanded, setExpanded] = useState(false);
+  const isGrounded = result.searchQueries && result.searchQueries.length > 0;
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 hover:border-slate-700 transition-colors">
+    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 hover:border-slate-700/80 transition-colors">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-3">
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <span className="text-xs font-mono font-medium px-2 py-0.5 rounded bg-slate-800 text-slate-400">
-              Q{index + 1}
+              Scenario {index + 1}
             </span>
             <span className="text-xs font-medium px-2 py-0.5 rounded bg-slate-800/80 text-blue-400 border border-slate-700/50">
               {result.category.replace(/_/g, " ")}
             </span>
+            {isGrounded ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800/50">
+                <Globe className="w-3 h-3" /> Checked against live web results
+              </span>
+            ) : (
+              <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-800/50 text-slate-400">
+                AI answered without web search
+              </span>
+            )}
           </div>
           <h3 className="text-base font-semibold text-white leading-snug">
             "{result.question}"
@@ -34,7 +44,11 @@ export const QuestionCard: React.FC<Props> = ({ result, index }) => {
         </div>
 
         <div className="shrink-0 flex items-center gap-2">
-          <PostureBadge posture={result.posture} rank={result.brandRank} />
+          <PostureBadge
+            posture={result.posture}
+            rank={result.brandRank}
+            alternativeRelationship={result.alternativeRelationship}
+          />
         </div>
       </div>
 
@@ -45,10 +59,22 @@ export const QuestionCard: React.FC<Props> = ({ result, index }) => {
         {result.recommendationReason}
       </div>
 
-      {result.searchQueries && result.searchQueries.length > 0 && (
+      {result.competitors && result.competitors.length > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
+          <Users className="w-3.5 h-3.5 text-slate-500 inline" />
+          <span className="font-medium text-slate-500">Competitors Surfaced:</span>
+          {result.competitors.map((comp, i) => (
+            <span key={i} className="px-2 py-0.5 rounded bg-slate-800/70 text-slate-300 text-[11px]">
+              {comp.name}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {isGrounded && (
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
           <Search className="w-3.5 h-3.5 text-slate-500 inline" />
-          <span className="font-medium text-slate-500">Grounded Searches:</span>
+          <span className="font-medium text-slate-500">Live Search Queries:</span>
           {result.searchQueries.map((q, i) => (
             <span key={i} className="px-2 py-0.5 rounded bg-slate-800/70 text-slate-300 font-mono text-[11px]">
               {q}
@@ -68,7 +94,10 @@ export const QuestionCard: React.FC<Props> = ({ result, index }) => {
             </>
           ) : (
             <>
-              View Raw Grounded AI Response ({result.citedSources.length} citations) <ChevronDown className="w-3.5 h-3.5" />
+              {isGrounded || result.citedSources.length > 0
+                ? `View Raw Grounded AI Response (${result.citedSources.length} citations)`
+                : `View Raw AI Response (Ungrounded)`}{" "}
+              <ChevronDown className="w-3.5 h-3.5" />
             </>
           )}
         </button>

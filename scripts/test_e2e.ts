@@ -77,8 +77,8 @@ async function runLiveEndToEndScan(targetUrl: string) {
     return { status: "BLOCKED_CONFIG", error: "GEMINI_API_KEY is not configured in .env.local" };
   }
 
-  // 5. Live Execution (Explicitly distinguishing LIVE_GEMINI_WITHOUT_GROUNDING vs LIVE_GEMINI_WITH_SEARCH_GROUNDING)
-  const enableSearch = process.env.ENABLE_SEARCH_GROUNDING === "true";
+  // 5. Live Execution (matching production scan route with real Google Search grounding enabled)
+  const enableSearch = process.env.ENABLE_SEARCH_GROUNDING !== "false";
   const executionMode = enableSearch ? "LIVE_GEMINI_WITH_SEARCH_GROUNDING" : "LIVE_GEMINI_WITHOUT_GROUNDING";
   console.log(`\n[5/8] Executing live Gemini evaluation [Mode: ${executionMode}]...`);
   const questionResults = [];
@@ -90,7 +90,6 @@ async function runLiveEndToEndScan(targetUrl: string) {
     console.log(`\n   -> Query: "${q.question}"`);
     const aiResponse = await provider.generateResponse(q.question, systemPrompt, {
       enableSearchGrounding: enableSearch,
-      maxOutputTokens: 600,
     });
 
     console.log(`      • Grounding Status: ${aiResponse.metadata?.searchGroundingStatus}`);

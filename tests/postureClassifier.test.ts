@@ -66,4 +66,50 @@ Other options worth considering include Splunk, AppDynamics, and **AcmeMetrics**
     const garbageRes = classifyPosture(brand, domain, "<xml>{}[]\\///???***</xml>");
     expect(garbageRes.posture).toBe("NOT_MENTIONED");
   });
+
+  describe("ALTERNATIVES Intent & List-Rank Detection", () => {
+    it("does not classify target brand as Rank 1 when mentioned inside competitor description", () => {
+      const text = `Here are the top alternatives to Resend:
+1. **SendGrid** - The most common enterprise alternative to Resend with high-volume deliverability.
+2. **Postmark** - Great for transactional emails, often chosen over Resend for latency.
+3. **Mailgun** - Another option.`;
+
+      // Non-alternatives intent test for list rank extraction
+      const nonAltRes = classifyPosture("Resend", "resend.com", text, "BEST_OF");
+      // Resend should NOT be Rank 1 (SendGrid is Rank 1!)
+      expect(nonAltRes.brandRank).not.toBe(1);
+
+      // Alternatives intent test
+      const altRes = classifyPosture("Resend", "resend.com", text, "ALTERNATIVES");
+      expect(altRes.posture).not.toBe("TOP_RECOMMENDATION");
+      expect(altRes.posture).not.toBe("RECOMMENDED");
+      expect(altRes.alternativeRelationship).toBe("BENCHMARK");
+      expect(altRes.brandRank).not.toBe(1);
+    });
+
+    it("recognizes target brand as BENCHMARK in alternatives response without purchase recommendation", () => {
+      const text = `While Resend is a popular developer-friendly email API, leading alternatives include Postmark, SendGrid, and AWS SES.`;
+      const res = classifyPosture("Resend", "resend.com", text, "ALTERNATIVES");
+      expect(res.alternativeRelationship).toBe("BENCHMARK");
+      expect(res.posture).toBe("CONSIDERED");
+      expect(res.recommendationReason).toContain("reference benchmark");
+    });
+
+    it("classifies DISPLACED when the AI actively argues against target brand or recommends switching away", () => {
+      const text = `Users looking to switch away from Resend often cite high pricing and lack of enterprise support. SendGrid and Postmark are superior choices for large-scale operations.`;
+      const res = classifyPosture("Resend", "resend.com", text, "ALTERNATIVES");
+      expect(res.alternativeRelationship).toBe("DISPLACED");
+      expect(res.posture).toBe("MENTIONED");
+      expect(res.recommendationReason).toContain("incumbent, but alternatives are actively recommended");
+    });
+
+    it("classifies DEFENDED when the AI advises sticking with or defending target brand", () => {
+      const text = `Although there are several alternatives, Resend remains the best option for developers due to its world-class DX. There is no need to switch from Resend.`;
+      const res = classifyPosture("Resend", "resend.com", text, "ALTERNATIVES");
+      expect(res.alternativeRelationship).toBe("DEFENDED");
+      expect(res.posture).toBe("CONSIDERED");
+      expect(res.recommendationReason).toContain("defending");
+    });
+  });
 });
+

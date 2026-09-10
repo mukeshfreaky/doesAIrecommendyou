@@ -1,6 +1,6 @@
 import React from "react";
 import { ActionItem } from "@/types";
-import { CheckCircle2, ArrowUpRight, Zap } from "lucide-react";
+import { CheckCircle2, Zap, AlertCircle, HelpCircle, ArrowRight } from "lucide-react";
 
 interface Props {
   items: ActionItem[];
@@ -40,43 +40,62 @@ export const PrescriptionList: React.FC<Props> = ({ items }) => {
       <div className="flex items-center gap-2.5 mb-2">
         <Zap className="w-5 h-5 text-amber-400" />
         <h2 className="text-xl font-bold text-white tracking-tight">
-          How to Become More Recommendable
+          What should you improve?
         </h2>
       </div>
       <p className="text-sm text-slate-400 mb-6">
-        Concrete tactical prescriptions to improve your standing in search-grounded AI recommendations.
+        Concrete steps to improve how AI assistants perceive, rank, and recommend your business.
       </p>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-5">
         {items.map((item) => (
           <div
             key={item.id}
-            className="rounded-xl border border-slate-800 bg-slate-950/70 p-5 hover:border-slate-700 transition-colors"
+            className="rounded-xl border border-slate-800 bg-slate-950/70 p-5 hover:border-slate-700/80 transition-colors"
           >
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <div className="flex items-center gap-2">
                 {getPriorityBadge(item.priority)}
-                <span className="text-xs font-mono text-slate-500">
+                <span className="text-xs font-mono text-slate-400">
                   {item.category.replace(/_/g, " ")}
                 </span>
               </div>
             </div>
 
-            <h3 className="text-base font-semibold text-white mb-2 flex items-start gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-1 shrink-0" />
+            <h3 className="text-base font-semibold text-white mb-3 flex items-start gap-2">
+              <CheckCircle2 className="w-4 h-4 text-blue-400 mt-1 shrink-0" />
               <span>{item.title}</span>
             </h3>
 
-            <p className="text-sm text-slate-300 mb-3 leading-relaxed">
-              {item.description}
-            </p>
-
-            <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-slate-400">
-              <div>
-                <span className="text-slate-500 font-medium">Impact:</span> {item.expectedImpact}
+            <div className="space-y-2.5 text-xs text-slate-300">
+              <div className="flex items-start gap-2">
+                <span className="font-semibold text-rose-400 shrink-0 w-28 flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5" /> Problem:
+                </span>
+                <span className="text-slate-300">{item.description}</span>
               </div>
-              <div className="text-slate-500 italic">
-                {item.rationale}
+
+              {item.rationale && (
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-amber-400 shrink-0 w-28 flex items-center gap-1">
+                    <HelpCircle className="w-3.5 h-3.5" /> Why it matters:
+                  </span>
+                  <span className="text-slate-400">{item.rationale}</span>
+                </div>
+              )}
+
+              <div className="flex items-start gap-2">
+                <span className="font-semibold text-emerald-400 shrink-0 w-28 flex items-center gap-1">
+                  <ArrowRight className="w-3.5 h-3.5" /> Suggested action:
+                </span>
+                <span className="text-slate-200">{item.title} — update web positioning and documentation to explicitly answer buyer comparison queries.</span>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+              <div>
+                <span className="text-slate-500 font-medium">Expected AI Impact:</span>{" "}
+                <span className="text-slate-300">{item.expectedImpact}</span>
               </div>
             </div>
           </div>

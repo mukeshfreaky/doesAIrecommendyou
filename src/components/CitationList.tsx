@@ -16,11 +16,11 @@ export const CitationList: React.FC<Props> = ({ citations }) => {
       <div className="flex items-center gap-2.5 mb-2">
         <Globe className="w-5 h-5 text-purple-400" />
         <h2 className="text-xl font-bold text-white tracking-tight">
-          Grounding Citations & Source Intelligence
+          Web Sources & Grounding Citations
         </h2>
       </div>
       <p className="text-sm text-slate-400 mb-6">
-        Domains retrieved and cited by Google Search Grounding to formulate buyer recommendations.
+        Live web sources retrieved and cited by AI search grounding to formulate buyer recommendations.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

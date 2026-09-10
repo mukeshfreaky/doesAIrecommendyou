@@ -5,6 +5,8 @@ import {
   formatDelimitedEvidence,
   SYSTEM_EVALUATOR_INSTRUCTION,
   validateQuestionQuality,
+  isValidEvaluativeAttribute,
+  getCategoryFallbackCriterion,
 } from "../src/generator/questionGenerator";
 import { BusinessProfile } from "../src/types";
 
@@ -123,5 +125,108 @@ describe("Buyer Question Generator & Prompt Injection Defense", () => {
     expect(res.valid).toBe(false);
     expect(res.reason).toContain("unverified industry");
   });
+
+  it("rejects malformed comparative grammar and slogan prepositions in validateQuestionQuality", () => {
+    const malformed =
+      "Which Email Delivery & Transactional Email API platforms offer the strongest Email for developers?";
+    const res = validateQuestionQuality(malformed, sampleProfile);
+    expect(res.valid).toBe(false);
+
+    const malformedSoftware =
+      "Which Electronic Signature platforms offer the strongest software?";
+    const resSoftware = validateQuestionQuality(malformedSoftware, sampleProfile);
+    expect(resSoftware.valid).toBe(false);
+    expect(resSoftware.reason).toContain("malformed comparative grammar");
+  });
+
+  describe("isValidEvaluativeAttribute", () => {
+    const category = "Email Delivery & Transactional Email API";
+    const audience = "developers and engineers";
+
+    it("rejects 'Email for developers' due to slogan structure and audience/category duplication", () => {
+      expect(isValidEvaluativeAttribute("Email for developers", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Built for developers", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Engineered for teams", category, audience)).toBe(false);
+    });
+
+    it("rejects category duplication inside feature slot", () => {
+      expect(isValidEvaluativeAttribute("Email", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Email delivery", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Transactional email", category, audience)).toBe(false);
+    });
+
+    it("rejects audience duplication inside feature slot", () => {
+      expect(isValidEvaluativeAttribute("developers", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("developer workflows", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("engineers", category, audience)).toBe(false);
+    });
+
+    it("rejects marketing slogans and headlines", () => {
+      expect(isValidEvaluativeAttribute("The modern email platform", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("The best way to send", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Anyone to write code", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("All-in-one suite", category, audience)).toBe(false);
+    });
+
+    it("accepts valid technical evaluative attributes", () => {
+      expect(isValidEvaluativeAttribute("deliverability rates", category, audience)).toBe(true);
+      expect(isValidEvaluativeAttribute("API reliability", category, audience)).toBe(true);
+      expect(isValidEvaluativeAttribute("SDK documentation", category, audience)).toBe(true);
+      expect(isValidEvaluativeAttribute("uptime SLA", category, audience)).toBe(true);
+      expect(isValidEvaluativeAttribute("low latency", category, audience)).toBe(true);
+      expect(isValidEvaluativeAttribute("tamper-evident audit trails", category, audience)).toBe(true);
+      expect(isValidEvaluativeAttribute("security compliance", category, audience)).toBe(true);
+      expect(isValidEvaluativeAttribute("webhook flexibility", category, audience)).toBe(true);
+    });
+  });
+
+  describe("Deterministic Category Fallback Criteria", () => {
+    it("provides appropriate deterministic criteria for email categories", () => {
+      const emailFallback = getCategoryFallbackCriterion("Email Delivery & Transactional Email API");
+      expect(emailFallback.attribute).toBe("deliverability and API reliability");
+      expect(emailFallback.question).toContain("highest deliverability rates");
+    });
+
+    it("provides appropriate deterministic criteria for developer tool categories", () => {
+      const devFallback = getCategoryFallbackCriterion("Developer Tools & Cloud Infrastructure");
+      expect(devFallback.attribute).toBe("developer experience and SDK documentation");
+      expect(devFallback.question).toContain("developer experience and SDK documentation");
+    });
+
+    it("provides appropriate deterministic criteria for security & legal categories", () => {
+      const secFallback = getCategoryFallbackCriterion("Electronic Signature Software");
+      expect(secFallback.attribute).toBe("security compliance and audit logging");
+      expect(secFallback.question).toContain("security compliance and audit logging");
+    });
+
+    it("falls back safely when extracted feature is 'Email for developers'", () => {
+      const resendProfile: BusinessProfile = {
+        name: "Resend",
+        domain: "resend.com",
+        canonicalCategory: "Email Delivery & Transactional Email API",
+        canonicalCategoryConfidence: "HIGH",
+        description: "Email for developers.",
+        productsOrServices: ["Email API", "Transactional Email"],
+        targetCustomers: ["developers", "engineers"],
+        industries: ["saas"],
+        pricingSignals: ["$20/mo"],
+        keyFeatures: ["Email for developers"],
+        useCases: ["sending transactional emails"],
+        locations: [],
+        differentiators: ["Email for developers"],
+        sourcePages: ["https://resend.com"],
+      };
+
+      const questions = generateBuyerQuestions(resendProfile);
+      const q5 = questions.find((q) => q.category === "FEATURE_SPECIFIC");
+      expect(q5).toBeDefined();
+      expect(q5?.question).not.toContain("strongest Email for developers");
+      expect(q5?.question).toContain("highest deliverability rates and API reliability");
+
+      const validation = validateQuestionQuality(q5!.question, resendProfile);
+      expect(validation.valid).toBe(true);
+    });
+  });
 });
+
 

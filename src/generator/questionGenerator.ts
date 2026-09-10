@@ -201,7 +201,219 @@ export function validateQuestionQuality(
     }
   }
 
+  // Check for malformed comparative grammar in feature slots (e.g. "strongest Email", "strongest software", "offer the strongest platform")
+  const malformedComparativeRegex =
+    /\b(?:strongest\s+(?:email|software|platform|platforms|tool|tools|solution|solutions|service|services|product|products)|offer(?:s)?\s+(?:the\s+)?(?:strongest|highest|best|fastest)\s+(?:email|software|platform|platforms|tool|tools|solution|solutions|service|services|product|products))\b/i;
+  if (malformedComparativeRegex.test(trimmed)) {
+    return {
+      valid: false,
+      reason: `Question contains malformed comparative grammar: "${trimmed.match(malformedComparativeRegex)?.[0]}" is not an evaluative attribute`,
+    };
+  }
+
+  // Check for slogan prepositions in comparative questions (e.g. "...offer the strongest Email for developers")
+  if (
+    /\boffer(?:s)?\s+(?:the\s+)?(?:strongest|highest|best)\s+.*\b(?:for\s+(?:developers|engineers|teams|businesses|startups|enterprises))\b/i.test(
+      trimmed
+    )
+  ) {
+    return {
+      valid: false,
+      reason: "Question contains slogan-style audience targeting inside comparative feature slot",
+    };
+  }
+
   return { valid: true };
+}
+
+export const EVALUATIVE_ATTRIBUTE_STEMS = [
+  "reliab",
+  "deliverab",
+  "uptime",
+  "latency",
+  "throughput",
+  "speed",
+  "performan",
+  "scalab",
+  "integrat",
+  "document",
+  "sdk",
+  "api",
+  "webhook",
+  "audit",
+  "complian",
+  "secur",
+  "encrypt",
+  "sla",
+  "monitor",
+  "analyt",
+  "track",
+  "customiz",
+  "workflow",
+  "automati",
+  "support",
+  "govern",
+  "resilien",
+  "redundanc",
+  "rate limit",
+  "concurren",
+  "cost",
+  "pricing",
+  "privacy",
+];
+
+const MARKETING_SLOGAN_PATTERNS = [
+  /\b(?:built for|designed for|tailored for|made for|crafted for|created for|aimed at)\b/i,
+  /\b(?:anyone to|everyone to|empower(?:ing)?|revolutioniz(?:ing)?|transform(?:ing)?|unleash(?:ing)?)\b/i,
+  /\b(?:simplif(?:y|ying)|best way to|easiest way to|all-in-one|next-generation|next gen)\b/i,
+  /^(?:the|a|an)\s+(?:leading|ultimate|best|modern|fastest|easiest)\b/i,
+  /\b(?:first-class|best-in-class|world-class|modern|powerful|leading|cutting-edge)\b/i,
+];
+
+/**
+ * Validates whether an extracted phrase is a legitimate evaluative attribute/dimension
+ * or an invalid slogan, category duplicate, or audience duplicate.
+ */
+export function isValidEvaluativeAttribute(
+  candidate: string,
+  categoryTerm: string,
+  targetAudience: string | null
+): boolean {
+  if (!candidate || typeof candidate !== "string") return false;
+  const trimmed = candidate.trim();
+  if (trimmed.length < 3 || trimmed.length > 50) return false;
+
+  const lowerCandidate = trimmed.toLowerCase();
+
+  // 1. Marketing slogan / headline checks
+  for (const pattern of MARKETING_SLOGAN_PATTERNS) {
+    if (pattern.test(lowerCandidate)) return false;
+  }
+
+  // Reject phrases with audience-targeting prepositions like "X for Y" (e.g. "Email for developers")
+  if (
+    /\b(?:for|to)\s+(?:developers|engineers|teams|businesses|startups|enterprises|everyone|anyone|marketers|creators)\b/i.test(
+      lowerCandidate
+    )
+  ) {
+    return false;
+  }
+
+  // 2. Category & Audience Subsumption / Duplication Checks
+  const candTokens = lowerCandidate.match(/[a-z0-9]+/g) || [];
+  if (candTokens.length === 0) return false;
+
+  const catTokens = (categoryTerm.toLowerCase().match(/[a-z0-9]+/g) || []).filter((t) => t.length > 2);
+  const audTokens = ((targetAudience || "").toLowerCase().match(/[a-z0-9]+/g) || []).filter((t) => t.length > 2);
+
+  // Helper for root matching (e.g. "developer" matches "developers")
+  const matchesRoot = (t1: string, t2: string) => {
+    if (t1 === t2) return true;
+    if (t1.length >= 4 && t2.length >= 4) {
+      return t1.startsWith(t2) || t2.startsWith(t1);
+    }
+    return false;
+  };
+
+  // Check overlap with audience:
+  // If the candidate refers to the target audience (e.g. "developers", "developer workflows"), reject.
+  const overlapsAudience = candTokens.some((ct) => audTokens.some((at) => matchesRoot(ct, at)));
+  if (overlapsAudience) {
+    return false;
+  }
+
+  // Check overlap with category:
+  // Candidate is a category duplicate if EVERY word in candidate is already in the category term
+  // e.g. "Email", "Email delivery", "Transactional email"
+  const nonCategoryTokens = candTokens.filter(
+    (ct) => !catTokens.some((catT) => matchesRoot(ct, catT))
+  );
+
+  if (nonCategoryTokens.length === 0) {
+    return false; // All tokens duplicate the category!
+  }
+
+  // 3. Must represent an evaluative dimension / capability
+  const hasEvaluativeStem = EVALUATIVE_ATTRIBUTE_STEMS.some((stem) => lowerCandidate.includes(stem));
+  if (!hasEvaluativeStem) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Returns deterministic, category-specific evaluation criteria and question templates
+ * when extracted features are invalid or missing.
+ */
+export function getCategoryFallbackCriterion(categoryTerm: string): { attribute: string; question: string } {
+  const cat = categoryTerm.toLowerCase();
+
+  if (
+    cat.includes("email") ||
+    cat.includes("messaging") ||
+    cat.includes("sms") ||
+    cat.includes("notification")
+  ) {
+    return {
+      attribute: "deliverability and API reliability",
+      question: `Which ${categoryTerm} platforms offer the highest deliverability rates and API reliability?`,
+    };
+  }
+  if (
+    cat.includes("developer") ||
+    cat.includes("api") ||
+    cat.includes("sdk") ||
+    cat.includes("cloud") ||
+    cat.includes("infrastructure") ||
+    cat.includes("devops")
+  ) {
+    return {
+      attribute: "developer experience and SDK documentation",
+      question: `Which ${categoryTerm} platforms provide the best developer experience and SDK documentation?`,
+    };
+  }
+  if (
+    cat.includes("security") ||
+    cat.includes("auth") ||
+    cat.includes("identity") ||
+    cat.includes("compliance") ||
+    cat.includes("signature") ||
+    cat.includes("legal")
+  ) {
+    return {
+      attribute: "security compliance and audit logging",
+      question: `Which ${categoryTerm} platforms offer the strongest security compliance and audit logging?`,
+    };
+  }
+  if (
+    cat.includes("analytics") ||
+    cat.includes("data") ||
+    cat.includes("database") ||
+    cat.includes("observability")
+  ) {
+    return {
+      attribute: "query performance and real-time analytics",
+      question: `Which ${categoryTerm} platforms offer the fastest query performance and real-time analytics?`,
+    };
+  }
+  if (
+    cat.includes("payment") ||
+    cat.includes("billing") ||
+    cat.includes("checkout") ||
+    cat.includes("fintech")
+  ) {
+    return {
+      attribute: "transaction reliability and fraud prevention",
+      question: `Which ${categoryTerm} platforms offer the highest transaction reliability and fraud prevention?`,
+    };
+  }
+
+  // Universal high-intent B2B fallback
+  return {
+    attribute: "API reliability and integration flexibility",
+    question: `Which ${categoryTerm} platforms offer the strongest API reliability and integration flexibility?`,
+  };
 }
 
 /**
@@ -211,7 +423,7 @@ export function validateQuestionQuality(
 export function generateBuyerQuestions(profile: BusinessProfile): BuyerQuestion[] {
   const categoryTerm = resolveCategoryTerm(profile);
   const targetAudience = resolveTargetAudience(profile);
-  const primaryFeature = resolvePrimaryFeature(profile);
+  const primaryFeature = resolvePrimaryFeature(profile, categoryTerm, targetAudience);
   const primaryUseCase = resolvePrimaryUseCase(profile);
   const brandName = sanitizeEvidenceText(profile.name, 35) || "the provider";
 
@@ -264,8 +476,8 @@ export function generateBuyerQuestions(profile: BusinessProfile): BuyerQuestion[
       generateCandidate: () =>
         primaryFeature
           ? `Which ${categoryTerm} platforms offer the strongest ${primaryFeature}?`
-          : `Which ${categoryTerm} platforms provide the most developer-friendly documentation and clear pricing?`,
-      generateFallback: () => `Which ${categoryTerm} platforms offer the most reliable performance and transparent pricing?`,
+          : getCategoryFallbackCriterion(categoryTerm).question,
+      generateFallback: () => getCategoryFallbackCriterion(categoryTerm).question,
       rationale: "Tests differentiation on specific capabilities or technical evaluation criteria.",
     },
   ];
@@ -277,9 +489,9 @@ export function generateBuyerQuestions(profile: BusinessProfile): BuyerQuestion[
     if (!validation.valid) {
       questionText = item.generateFallback();
       validation = validateQuestionQuality(questionText, profile);
-      // If fallback still somehow failed (e.g. edge case in category term), apply safe canonical generic
+      // If fallback still somehow failed, apply safe canonical category fallback
       if (!validation.valid) {
-        questionText = `What are the most reliable ${sanitizeEvidenceText(profile.canonicalCategory || "software", 30)} platforms available today?`;
+        questionText = getCategoryFallbackCriterion(categoryTerm).question;
       }
     }
 
@@ -321,15 +533,19 @@ function resolveTargetAudience(profile: BusinessProfile): string | null {
   return null;
 }
 
-function resolvePrimaryFeature(profile: BusinessProfile): string | null {
+function resolvePrimaryFeature(
+  profile: BusinessProfile,
+  categoryTerm: string,
+  targetAudience: string | null
+): string | null {
   const candidates = [...(profile.keyFeatures || []), ...(profile.differentiators || [])];
   for (const f of candidates) {
     const sanitized = sanitizeEvidenceText(f, 40);
-    // Ignore garbled or generic features
+    // Validate that candidate is a legitimate evaluative attribute
     if (
       sanitized &&
-      sanitized.length > 3 &&
-      !CONTAMINATED_PHRASES.some((cp) => sanitized.toLowerCase().includes(cp))
+      !CONTAMINATED_PHRASES.some((cp) => sanitized.toLowerCase().includes(cp)) &&
+      isValidEvaluativeAttribute(sanitized, categoryTerm, targetAudience)
     ) {
       return sanitized;
     }

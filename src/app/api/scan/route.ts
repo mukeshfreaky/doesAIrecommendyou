@@ -159,11 +159,12 @@ export async function POST(req: NextRequest) {
       totalOutputTokens += aiResponse.tokenUsage?.completionTokens || 0;
       totalEstimatedCost += aiResponse.estimatedCostUSD;
 
-      // Classify posture
+      // Classify posture with intent awareness
       const postureResult = classifyPosture(
         businessProfile.name,
         businessProfile.domain,
-        aiResponse.content
+        aiResponse.content,
+        q.category
       );
 
       // Extract competitors from this individual response
@@ -180,6 +181,7 @@ export async function POST(req: NextRequest) {
         rationale: q.rationale,
         rawAIResponse: aiResponse.content,
         posture: postureResult.posture,
+        alternativeRelationship: postureResult.alternativeRelationship,
         brandRank: postureResult.brandRank,
         recommendationReason: postureResult.recommendationReason,
         competitors: individualCompetitors,
@@ -241,7 +243,10 @@ export async function POST(req: NextRequest) {
         providerId: provider.id,
         modelId: provider.modelId,
         searchGroundingEnabled: lastMetadata?.searchGroundingEnabled ?? true,
-        searchGroundingStatus: lastMetadata?.searchGroundingStatus ?? "GROUNDED",
+        searchGroundingStatus:
+          totalSearchQueries > 0 || questionResults.some((q) => q.citedSources.length > 0)
+            ? "GROUNDED"
+            : "UNGROUNDED",
         groundingError: lastMetadata?.groundingError,
         searchQueriesExecuted: totalSearchQueries,
         inputTokens: totalInputTokens,

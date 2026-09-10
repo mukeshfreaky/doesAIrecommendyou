@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { Citation, ProviderMetadata } from "@/types";
 import { AIProvider, AIResponse, ProviderOptions, RawGroundingMetadata } from "./types";
+import { checkAndIncrementLiveCall } from "./safetyGate";
 
 export class GeminiProvider implements AIProvider {
   readonly id = "google_gemini";
@@ -9,7 +10,7 @@ export class GeminiProvider implements AIProvider {
   private client: GoogleGenAI | null = null;
 
   constructor(modelId?: string) {
-    this.modelId = modelId || process.env.GEMINI_MODEL || "gemini-3.8-flash";
+    this.modelId = modelId || process.env.GEMINI_MODEL || "gemini-3-flash-preview";
     const apiKey = process.env.GEMINI_API_KEY;
     if (apiKey && apiKey.trim().length > 0) {
       this.client = new GoogleGenAI({ apiKey });
@@ -31,10 +32,16 @@ export class GeminiProvider implements AIProvider {
       );
     }
 
+    // Safety Gate: Protect development budget and strictly enforce AI_LIVE_ENABLED / limits
+    const safety = checkAndIncrementLiveCall(this.id);
+    if (!safety.allowed) {
+      throw new Error(`[AI Safety Gate Blocked]: ${safety.reason}`);
+    }
+
     const startTime = Date.now();
     const enableSearch = options?.enableSearchGrounding ?? true;
 
-    // Configure tools and instruction according to official @google/genai SDK
+    // Configure tools and options for @google/genai SDK
     const config: Record<string, unknown> = {};
     if (systemInstruction) {
       config.systemInstruction = systemInstruction;
@@ -45,75 +52,62 @@ export class GeminiProvider implements AIProvider {
     if (options?.maxOutputTokens !== undefined) {
       config.maxOutputTokens = options.maxOutputTokens;
     }
-
-    let searchGroundingStatus: "GROUNDED" | "UNGROUNDED" | "QUOTA_EXHAUSTED" | "ERROR" =
-      enableSearch ? "GROUNDED" : "UNGROUNDED";
-    let groundingError: string | undefined;
-    let actualSearchEnabled = enableSearch;
+    if (enableSearch) {
+      config.tools = [{ googleSearch: {} }];
+    }
 
     let response: any;
     try {
-      if (enableSearch) {
-        config.tools = [{ googleSearch: {} }];
-      }
-
-      response = await callGenerateContentWithRetry(
-        this.client,
-        this.modelId,
-        prompt,
-        config
-      );
+      response = await this.client.models.generateContent({
+        model: this.modelId,
+        contents: prompt,
+        config,
+      });
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      // If search grounding was enabled and failed due to quota exhaustion / 429 / search tool restrictions
       if (
-        enableSearch &&
-        (errorMsg.includes("429") ||
-          errorMsg.includes("RESOURCE_EXHAUSTED") ||
-          errorMsg.includes("Quota exceeded") ||
-          errorMsg.includes("quota") ||
-          errorMsg.includes("googleSearch"))
+        errorMsg.includes("429") ||
+        errorMsg.includes("RESOURCE_EXHAUSTED") ||
+        errorMsg.includes("Quota exceeded") ||
+        errorMsg.includes("quota")
       ) {
-        searchGroundingStatus = "QUOTA_EXHAUSTED";
-        groundingError = errorMsg;
-        actualSearchEnabled = false;
-        // Retry ungrounded without googleSearch tool
-        delete config.tools;
-        try {
-          response = await callGenerateContentWithRetry(
-            this.client,
-            this.modelId,
-            prompt,
-            config
-          );
-        } catch (retryErr: unknown) {
-          const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
-          throw new Error(`Google Gemini API execution failed (ungrounded retry): ${retryMsg}`);
-        }
-      } else {
-        throw new Error(`Google Gemini API execution failed: ${errorMsg}`);
+        throw new Error(`Google Gemini API quota/billing exhausted: ${errorMsg}`);
       }
+      throw new Error(`Google Gemini API execution failed: ${errorMsg}`);
     }
 
     const latencyMs = Date.now() - startTime;
     const candidate = response.candidates?.[0];
-    const content = candidate?.content?.parts?.map((p: any) => p.text || "").join("") || response.text || "";
+    const content =
+      candidate?.content?.parts?.map((p: any) => p.text || "").join("") ||
+      response.text ||
+      "";
 
     // Extract raw grounding metadata
     const rawGrounding = candidate?.groundingMetadata as RawGroundingMetadata | undefined;
     const searchQueries: string[] = rawGrounding?.webSearchQueries || [];
+    const groundingChunks = rawGrounding?.groundingChunks || [];
+
+    // Truthful grounding determination: REQUESTED != ACTUAL
+    let searchGroundingStatus: "GROUNDED" | "UNGROUNDED" | "QUOTA_EXHAUSTED" | "ERROR";
+    if (searchQueries.length > 0 || groundingChunks.length > 0) {
+      searchGroundingStatus = "GROUNDED";
+    } else {
+      searchGroundingStatus = "UNGROUNDED";
+    }
 
     // Extract citations from grounding chunks
     const citations: Citation[] = [];
-    if (rawGrounding?.groundingChunks) {
-      for (const chunk of rawGrounding.groundingChunks) {
-        if (chunk.web?.uri) {
-          const uri = chunk.web.uri;
-          const domain = extractDomainFromUrl(uri);
+    if (groundingChunks.length > 0) {
+      for (const chunk of groundingChunks) {
+        if (chunk.web?.uri || chunk.web?.title) {
+          const uri = chunk.web?.uri || "";
+          const domain = extractDomainFromChunk(chunk);
+          const title = chunk.web?.title || domain;
           citations.push({
             url: uri,
             domain,
-            title: chunk.web.title || domain,
+            title,
             category: categorizeDomain(domain),
             supportsBrand: false, // will be evaluated during analysis
             frequency: 1,
@@ -138,9 +132,9 @@ export class GeminiProvider implements AIProvider {
     const metadata: ProviderMetadata = {
       providerId: this.id,
       modelId: this.modelId,
-      searchGroundingEnabled: actualSearchEnabled,
+      searchGroundingEnabled: enableSearch,
       searchGroundingStatus,
-      groundingError,
+      groundingError: undefined,
       searchQueriesExecuted: searchQueries.length,
       inputTokens: promptTokens,
       outputTokens: completionTokens,
@@ -164,13 +158,27 @@ export class GeminiProvider implements AIProvider {
   }
 }
 
-function extractDomainFromUrl(urlStr: string): string {
-  try {
-    const parsed = new URL(urlStr);
-    return parsed.hostname.replace(/^www\./, "").toLowerCase();
-  } catch {
-    return urlStr;
+function extractDomainFromChunk(chunk: { web?: { uri?: string; title?: string } }): string {
+  const title = chunk.web?.title?.trim() || "";
+  // Check if title is already a clean domain (e.g. "mailtrap.io", "ventureharbour.com")
+  if (/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(title)) {
+    return title.toLowerCase().replace(/^www\./, "");
   }
+  // Check if title contains a domain pattern
+  const match = title.match(/([a-zA-Z0-9-]+\.[a-zA-Z]{2,})/);
+  if (match) {
+    return match[1].toLowerCase().replace(/^www\./, "");
+  }
+  // If URI is not an internal redirect, parse its hostname
+  if (chunk.web?.uri) {
+    try {
+      const parsed = new URL(chunk.web.uri);
+      if (!parsed.hostname.includes("vertexaisearch.cloud.google.com")) {
+        return parsed.hostname.toLowerCase().replace(/^www\./, "");
+      }
+    } catch {}
+  }
+  return title || "web-source";
 }
 
 function categorizeDomain(domain: string): Citation["category"] {
@@ -224,39 +232,3 @@ function categorizeDomain(domain: string): Citation["category"] {
   }
   return "OTHER";
 }
-
-async function callGenerateContentWithRetry(
-  client: GoogleGenAI,
-  modelId: string,
-  prompt: string,
-  config: Record<string, unknown>,
-  maxRetries = 2
-): Promise<any> {
-  let currentModel = modelId;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await client.models.generateContent({
-        model: currentModel,
-        contents: prompt,
-        config,
-      });
-    } catch (err: any) {
-      const msg = err instanceof Error ? err.message : String(err);
-      const isTemporary =
-        msg.includes("503") ||
-        msg.includes("UNAVAILABLE") ||
-        msg.includes("demand") ||
-        msg.includes("overloaded");
-
-      if (isTemporary && attempt < maxRetries) {
-        if (currentModel === "gemini-3.8-flash") {
-          currentModel = "gemini-3.6-flash";
-        }
-        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
-        continue;
-      }
-      throw err;
-    }
-  }
-}
-

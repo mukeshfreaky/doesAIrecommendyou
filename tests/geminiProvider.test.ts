@@ -60,4 +60,40 @@ describe("AI Providers & Registry", () => {
     expect(res.groundingQueries).toHaveLength(0);
     expect(res.rawGroundingMetadata).toBeUndefined();
   });
+
+  it("GeminiProvider blocks live calls when AI_LIVE_ENABLED is not true", async () => {
+    const prevKey = process.env.GEMINI_API_KEY;
+    const prevLive = process.env.AI_LIVE_ENABLED;
+    process.env.GEMINI_API_KEY = "test-key";
+    process.env.AI_LIVE_ENABLED = "false";
+
+    const provider = new GeminiProvider();
+    await expect(provider.generateResponse("test question")).rejects.toThrow(
+      /AI Safety Gate Blocked/i
+    );
+
+    if (prevKey) process.env.GEMINI_API_KEY = prevKey;
+    else delete process.env.GEMINI_API_KEY;
+    if (prevLive) process.env.AI_LIVE_ENABLED = prevLive;
+    else delete process.env.AI_LIVE_ENABLED;
+  });
+
+  it("evaluates UNGROUNDED with zero citations when search grounding tool was requested but returned no queries or chunks", async () => {
+    const mock = new MockProvider();
+    mock.setMockResponse("timeless-query", {
+      content: "Parametric response without web search.",
+      citations: [],
+      groundingQueries: [],
+      rawGroundingMetadata: {
+        webSearchQueries: [],
+        groundingChunks: [],
+      },
+    });
+
+    const res = await mock.generateResponse("timeless-query");
+    expect(res.metadata.searchGroundingEnabled).toBe(true);
+    // Crucial: 0 search queries executed means no citations can be fabricated
+    expect(res.groundingQueries).toHaveLength(0);
+    expect(res.citations).toHaveLength(0);
+  });
 });

@@ -21,11 +21,11 @@ export const CompetitorTable: React.FC<Props> = ({ competitors }) => {
       <div className="flex items-center gap-2.5 mb-2">
         <Users2 className="w-5 h-5 text-blue-400" />
         <h2 className="text-xl font-bold text-white tracking-tight">
-          Competitor Recommendation Landscape
+          Who is AI comparing you with?
         </h2>
       </div>
       <p className="text-sm text-slate-400 mb-6">
-        Competitors that AI systems currently surface instead or alongside your brand.
+        When buyers ask AI for recommendations in your category, these are the alternative solutions AI surfaced.
       </p>
 
       <div className="overflow-x-auto">
