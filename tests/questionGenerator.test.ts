@@ -186,23 +186,36 @@ describe("Buyer Question Generator & Prompt Injection Defense", () => {
       expect(isValidEvaluativeAttribute("engineers", category, audience)).toBe(false);
     });
 
-    it("rejects marketing slogans and headlines", () => {
-      expect(isValidEvaluativeAttribute("The modern email platform", category, audience)).toBe(false);
-      expect(isValidEvaluativeAttribute("The best way to send", category, audience)).toBe(false);
-      expect(isValidEvaluativeAttribute("Anyone to write code", category, audience)).toBe(false);
-      expect(isValidEvaluativeAttribute("All-in-one suite", category, audience)).toBe(false);
+    it("rejects promotional headlines, marketing slogans, and multi-action verb chains", () => {
+      expect(isValidEvaluativeAttribute("Faster app launch", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Build, review, and ship", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Modern teams", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Powerful workflows", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Intake and integrations", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Built for the future. Available today.", category, audience)).toBe(false);
+      expect(isValidEvaluativeAttribute("Wildly Comfortable. Super Natural.", category, audience)).toBe(false);
     });
 
-    it("accepts valid technical evaluative attributes", () => {
-      expect(isValidEvaluativeAttribute("deliverability rates", category, audience)).toBe(true);
-      expect(isValidEvaluativeAttribute("API reliability", category, audience)).toBe(true);
-      expect(isValidEvaluativeAttribute("SDK documentation", category, audience)).toBe(true);
-      expect(isValidEvaluativeAttribute("uptime SLA", category, audience)).toBe(true);
-      expect(isValidEvaluativeAttribute("low latency", category, audience)).toBe(true);
-      expect(isValidEvaluativeAttribute("tamper-evident audit trails", category, audience)).toBe(true);
-      expect(isValidEvaluativeAttribute("security compliance", category, audience)).toBe(true);
-      expect(isValidEvaluativeAttribute("webhook flexibility", category, audience)).toBe(true);
-      expect(isValidEvaluativeAttribute("integrations", category, audience)).toBe(true);
+    it("accepts valid evaluative dimensions across multiple archetypes and categories", () => {
+      // Email / Developer Tools
+      expect(isValidEvaluativeAttribute("high deliverability rates", "Email Delivery & Transactional Email API", "developers")).toBe(true);
+      expect(isValidEvaluativeAttribute("API reliability", "Email Delivery & Transactional Email API", "developers")).toBe(true);
+      expect(isValidEvaluativeAttribute("SDK documentation", "Developer Tools", "engineers")).toBe(true);
+      expect(isValidEvaluativeAttribute("uptime SLA", "Cloud Infrastructure", "devops")).toBe(true);
+
+      // Footwear / Consumer E-Commerce
+      expect(isValidEvaluativeAttribute("material durability", "Sustainable Footwear & Apparel", "consumers")).toBe(true);
+      expect(isValidEvaluativeAttribute("all-day comfort", "Sustainable Footwear & Apparel", "consumers")).toBe(true);
+
+      // Travel / Hospitality
+      expect(isValidEvaluativeAttribute("guest experience", "Vacation Rentals & Travel Accommodations", "travelers")).toBe(true);
+      expect(isValidEvaluativeAttribute("property selection", "Vacation Rentals & Travel Accommodations", "travelers")).toBe(true);
+      expect(isValidEvaluativeAttribute("verified listings", "Vacation Rentals & Travel Accommodations", "travelers")).toBe(true);
+
+      // Project Management / B2B SaaS
+      expect(isValidEvaluativeAttribute("workflow flexibility", "Project Management & Issue Tracking", "product teams")).toBe(true);
+      expect(isValidEvaluativeAttribute("integration breadth", "Project Management & Issue Tracking", "product teams")).toBe(true);
+      expect(isValidEvaluativeAttribute("onboarding speed", "Project Management & Issue Tracking", "product teams")).toBe(true);
     });
   });
 

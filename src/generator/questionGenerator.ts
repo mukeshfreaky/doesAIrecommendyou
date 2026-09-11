@@ -214,9 +214,14 @@ const MARKETING_SLOGAN_PATTERNS = [
   /\b(?:anyone to|everyone to|empower(?:ing)?|revolutioniz(?:ing)?|transform(?:ing)?|unleash(?:ing)?)\b/i,
   /\b(?:simplif(?:y|ying)|best way to|easiest way to|all-in-one|next-generation|next-gen|next gen)\b/i,
   /^(?:the|a|an)\s+(?:leading|ultimate|best|modern|fastest|easiest|top)\b/i,
+  /^(?:faster|fastest|quicker|quickest|easier|easiest|better|best|smarter|smartest|greater|greatest),?\s+/i,
   /^(?:fast|quick|easy|simple|flexible|secure|reliable),?\s+/i,
-  /\b(?:first-class|best-in-class|world-class|modern|powerful|leading|cutting-edge|unmatched|seamless|effortless|delightful|advanced|superior|instant)\b/i,
+  /\b(?:first-class|best-in-class|world-class|modern|powerful|leading|cutting-edge|unmatched|seamless|effortless|delightful|advanced|superior|instant|super|ultra)\b/i,
   /\b(?:you'll|you\s+will|you\s+can|you\s+need|you\s+want|enjoy\s+using)\b/i,
+  /\b(?:build|review|ship|plan|deploy|launch|manage|track|test|code|sync|automate|connect|intake|design|create|deliver)\s*(?:,|&|and|\/)\s*(?:build|review|ship|plan|deploy|launch|manage|track|test|code|sync|automate|connect|intake|design|create|deliver)\b/i,
+  /\b(?:modern\s+teams|fast-moving\s+teams|high-performance\s+teams|engineering\s+teams|product\s+teams|software\s+teams|developer\s+teams)\b/i,
+  /\b(?:available today|built for the future|super natural|wildly comfortable|added to cart|top articles|inspiration for future|site footer|support|hosting|changelog|popular picks|customer favorites|men's shoes|women's shoes)\b/i,
+  /\b(?:app\s+launch|faster\s+app\s+launch|powerful\s+workflows|modern\s+teams|build,\s*review,\s*and\s*ship)\b/i,
 ];
 
 export const EVALUATIVE_ATTRIBUTE_STEMS = [
@@ -247,6 +252,46 @@ export const EVALUATIVE_ATTRIBUTE_STEMS = [
   "pricing",
   "privacy",
   "observab",
+  "durab",
+  "comfort",
+  "breathab",
+  "traction",
+  "cushion",
+  "waterproof",
+  "sustainab",
+  "flexib",
+  "onboard",
+  "integrat",
+  "collaborat",
+  "efficien",
+  "precis",
+  "accurac",
+];
+
+export const VALID_DIMENSION_TERMS = [
+  "rate",
+  "rates",
+  "speed",
+  "uptime",
+  "latency",
+  "throughput",
+  "sla",
+  "security",
+  "compliance",
+  "durability",
+  "comfort",
+  "guest experience",
+  "property selection",
+  "verified listings",
+  "workflow flexibility",
+  "integration breadth",
+  "developer experience",
+  "onboarding speed",
+  "api reliability",
+  "audit logging",
+  "material durability",
+  "all-day comfort",
+  "customer satisfaction",
 ];
 
 /**
@@ -464,16 +509,22 @@ export function isValidEvaluativeAttribute(
   const trimmed = candidate.trim();
   if (trimmed.length < 3 || trimmed.length > 50) return false;
 
+  // Reject sentences, taglines, or fragments with punctuation
+  if (/[.!?]/.test(trimmed)) return false;
+
   const lowerCandidate = trimmed.toLowerCase();
 
+  // Reject bare action verbs or action prefixes
   if (BARE_ACTION_VERBS.has(lowerCandidate) || ACTION_VERB_PREFIX_PATTERN.test(lowerCandidate)) {
     return false;
   }
 
+  // Reject marketing slogans, puffery, multi-verb sequences, and team/benefit headlines
   for (const pattern of MARKETING_SLOGAN_PATTERNS) {
     if (pattern.test(lowerCandidate)) return false;
   }
 
+  // Reject audience targeting inside attribute
   if (
     /\b(?:for|to)\s+(?:developers|engineers|teams|businesses|startups|enterprises|everyone|anyone|marketers|creators|merchants|users)\b/i.test(
       lowerCandidate
@@ -484,6 +535,19 @@ export function isValidEvaluativeAttribute(
 
   // Reject binary product toggles / modes / fragments
   if (/\b(?:test\s+mode|beta\s+mode|dark\s+mode|live\s+mode|free\s+tier|free\s+trial)\b/i.test(lowerCandidate)) {
+    return false;
+  }
+
+  // Reject promotional action-noun phrases
+  if (/\b(?:app\s+launch|product\s+launch|code\s+shipping|software\s+shipping|task\s+intake)\b/i.test(lowerCandidate)) {
+    return false;
+  }
+
+  // Verify that candidate contains at least one evaluative stem or recognized dimension term
+  const hasEvaluativeStem = EVALUATIVE_ATTRIBUTE_STEMS.some((stem) => lowerCandidate.includes(stem));
+  const hasDimensionTerm = VALID_DIMENSION_TERMS.some((dim) => lowerCandidate.includes(dim));
+
+  if (!hasEvaluativeStem && !hasDimensionTerm) {
     return false;
   }
 

@@ -166,18 +166,18 @@ export const ScoreGauge: React.FC<Props> = ({ score }) => {
         </div>
       </div>
 
-      {/* Brand Authority / Benchmark Index (Kept strictly separate) */}
+      {/* Competitive Benchmark Signal (Experimental - Kept strictly separate) */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-7 backdrop-blur-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Award className="w-4 h-4 text-purple-400" />
               <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-300">
-                Brand Authority & Benchmark Index
+                Competitive Benchmark Signal <span className="text-[10px] text-purple-400 font-normal border border-purple-800/60 rounded px-1.5 py-0.5 ml-1">Experimental</span>
               </h3>
             </div>
             <p className="text-xs text-slate-400 max-w-xl">
-              How strongly AI recognizes your business as an established reference point when buyers compare alternatives.
+              Experimental signal observing how AI positions your brand when prospective buyers search for competitor alternatives.
             </p>
           </div>
 
@@ -191,7 +191,7 @@ export const ScoreGauge: React.FC<Props> = ({ score }) => {
         <div className="mt-4 pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-400">
           <p>{benchmarkBadge.desc}</p>
           <span className="text-[11px] text-slate-500 shrink-0 italic">
-            * Benchmark recognition measures market salience, not a purchase recommendation.
+            * Benchmark signal measures competitive reference presence, not a purchase recommendation.
           </span>
         </div>
       </div>
