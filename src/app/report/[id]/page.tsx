@@ -14,9 +14,9 @@ export default async function ReportPage({
   if (!report) {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center p-6 text-center max-w-md mx-auto">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-8">
-          <h1 className="text-xl font-bold text-white mb-2">Report Not Found</h1>
-          <p className="text-sm text-slate-400 mb-6">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-950/80 p-8">
+          <h1 className="text-xl font-bold text-zinc-100 mb-2">Report Not Found</h1>
+          <p className="text-sm text-zinc-400 mb-6">
             This scan report is expired or does not exist in memory.
           </p>
           <Link

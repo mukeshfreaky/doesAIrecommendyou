@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { QuestionResult } from "@/types";
 import { PostureBadge } from "./PostureBadge";
-import { ChevronDown, ChevronUp, Globe, Search, ExternalLink, Users, AlertCircle, ShieldCheck } from "lucide-react";
+import { ChevronDown, ChevronUp, Globe, ExternalLink, Users, AlertCircle, ShieldCheck } from "lucide-react";
 
 interface Props {
   result: QuestionResult;
@@ -17,39 +17,39 @@ export const QuestionCard: React.FC<Props> = ({ result, index }) => {
   const isEvaluationFailed = result.evidenceStatus === "EVALUATION_FAILED";
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 hover:border-slate-700/80 transition-colors">
+    <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-5 hover:border-zinc-700/80 transition-colors text-left">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-3">
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            <span className="text-xs font-mono font-medium px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+            <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800">
               Scenario {index + 1}
             </span>
-            <span className="text-xs font-medium px-2 py-0.5 rounded bg-slate-800/80 text-blue-400 border border-slate-700/50">
+            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-zinc-900 text-blue-400 border border-zinc-800">
               {result.category.replace(/_/g, " ")}
             </span>
             {isEvidenceBacked ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800/50">
-                <Globe className="w-3 h-3" /> Checked against live web evidence
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800/50 font-mono">
+                <Globe className="w-3 h-3" /> Live web evidence verified
               </span>
             ) : isRetrievalFailed ? (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800/50">
-                <AlertCircle className="w-3 h-3" /> Search provider error (Inconclusive — not counted against your score)
+                <AlertCircle className="w-3 h-3" /> Search provider error (Inconclusive — not counted against score)
               </span>
             ) : isEvaluationFailed ? (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800/50">
-                <AlertCircle className="w-3 h-3" /> Evaluator error (Inconclusive — not counted against your score)
+                <AlertCircle className="w-3 h-3" /> Evaluator error (Inconclusive — not counted against score)
               </span>
             ) : (
-              <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-800/50 text-slate-400">
-                AI answered without live web retrieval
+              <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 font-mono">
+                Model parametric evaluation
               </span>
             )}
           </div>
           <h3 className="text-base font-semibold text-white leading-snug">
             "{result.question}"
           </h3>
-          <p className="text-xs text-slate-400 mt-1 italic">
-            Buyer intent tested: {result.rationale}
+          <p className="text-xs text-zinc-400 mt-1 italic">
+            Buyer intent: {result.rationale}
           </p>
         </div>
 
@@ -62,19 +62,19 @@ export const QuestionCard: React.FC<Props> = ({ result, index }) => {
         </div>
       </div>
 
-      <div className="mt-3 p-3 rounded-lg bg-slate-950/70 border border-slate-800/80 text-sm text-slate-300">
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+      <div className="mt-3 p-3.5 rounded-lg bg-zinc-900/60 border border-zinc-800/80 text-sm text-zinc-200">
+        <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1 font-mono">
           AI Recommendation Evaluation:
         </span>
         {result.recommendationReason}
       </div>
 
       {result.competitors && result.competitors.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
-          <Users className="w-3.5 h-3.5 text-slate-500 inline" />
-          <span className="font-medium text-slate-500">Competitors Surfaced:</span>
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-zinc-400">
+          <Users className="w-3.5 h-3.5 text-zinc-500 inline" />
+          <span className="font-medium text-zinc-500">Competitors Surfaced:</span>
           {result.competitors.map((comp, i) => (
-            <span key={i} className="px-2 py-0.5 rounded bg-slate-800/70 text-slate-300 text-[11px]">
+            <span key={i} className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 text-[11px] font-mono">
               {comp.name}
             </span>
           ))}
@@ -84,16 +84,16 @@ export const QuestionCard: React.FC<Props> = ({ result, index }) => {
       {/* Claims backed by evidence */}
       {result.claims && result.claims.length > 0 && (
         <div className="mt-3 space-y-1.5">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+          <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block font-mono">
             Evidence-Backed Claims:
           </span>
           <ul className="space-y-1">
             {result.claims.map((claimItem, idx) => (
-              <li key={idx} className="text-xs text-slate-300 flex items-start gap-1.5">
+              <li key={idx} className="text-xs text-zinc-300 flex items-start gap-1.5">
                 <span className="text-emerald-400 font-mono text-[11px] shrink-0">✔</span>
                 <span>
                   {claimItem.claim}
-                  <span className="text-slate-500 font-mono text-[10px] ml-1.5">
+                  <span className="text-zinc-500 font-mono text-[10px] ml-1.5">
                     [{claimItem.evidenceIds.join(", ")}]
                   </span>
                 </span>
@@ -103,20 +103,20 @@ export const QuestionCard: React.FC<Props> = ({ result, index }) => {
         </div>
       )}
 
-      <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+      <div className="mt-4 pt-3 border-t border-zinc-800/80 flex items-center justify-between">
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-xs font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors"
+          className="text-xs font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors font-mono"
         >
           {expanded ? (
             <>
-              Hide Raw AI Answer & Evidence <ChevronUp className="w-3.5 h-3.5" />
+              Hide Raw Evidence & AI Output <ChevronUp className="w-3.5 h-3.5" />
             </>
           ) : (
             <>
-              {isEvidenceBacked || result.citedSources.length > 0
-                ? `View Raw Evidence & AI Evaluation (${result.citedSources.length} sources)`
-                : `View Raw AI Response`}{" "}
+              {isEvidenceBacked || (result.citedSources && result.citedSources.length > 0)
+                ? `Inspect Web Evidence & AI Evaluation (${result.citedSources?.length || 0} sources)`
+                : `Inspect Raw AI Response`}{" "}
               <ChevronDown className="w-3.5 h-3.5" />
             </>
           )}
@@ -124,17 +124,17 @@ export const QuestionCard: React.FC<Props> = ({ result, index }) => {
       </div>
 
       {expanded && (
-        <div className="mt-4 space-y-4 border-t border-slate-800 pt-4">
+        <div className="mt-4 space-y-4 border-t border-zinc-800 pt-4">
           {/* Retrieved Evidence Sources */}
           {result.retrievedEvidence && result.retrievedEvidence.length > 0 && (
             <div>
-              <div className="text-xs font-semibold text-slate-400 uppercase mb-2 flex items-center gap-1.5">
+              <div className="text-xs font-semibold text-zinc-400 uppercase mb-2 flex items-center gap-1.5 font-mono">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                 Retrieved Web Evidence:
               </div>
               <div className="space-y-2">
                 {result.retrievedEvidence.map((ev) => (
-                  <div key={ev.id} className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs">
+                  <div key={ev.id} className="p-3 rounded-lg bg-zinc-950 border border-zinc-800 text-xs">
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <span className="font-mono text-emerald-400 font-medium">[{ev.id}] {ev.domain}</span>
                       <a
@@ -147,7 +147,7 @@ export const QuestionCard: React.FC<Props> = ({ result, index }) => {
                       </a>
                     </div>
                     <div className="text-white font-medium mb-1">{ev.title}</div>
-                    <p className="text-slate-400 text-[11px] leading-relaxed line-clamp-2">{ev.snippet}</p>
+                    <p className="text-zinc-400 text-[11px] leading-relaxed line-clamp-2">{ev.snippet}</p>
                   </div>
                 ))}
               </div>
@@ -156,10 +156,10 @@ export const QuestionCard: React.FC<Props> = ({ result, index }) => {
 
           {result.rawAIResponse && (
             <div>
-              <div className="text-xs font-semibold text-slate-400 uppercase mb-2">
+              <div className="text-xs font-semibold text-zinc-400 uppercase mb-2 font-mono">
                 Raw AI Evaluator Response:
               </div>
-              <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 font-mono text-xs text-slate-300 whitespace-pre-wrap leading-relaxed max-h-80 overflow-y-auto">
+              <div className="p-4 rounded-lg bg-zinc-950 border border-zinc-800 font-mono text-xs text-zinc-300 whitespace-pre-wrap leading-relaxed max-h-80 overflow-y-auto">
                 {result.rawAIResponse}
               </div>
             </div>
@@ -169,3 +169,4 @@ export const QuestionCard: React.FC<Props> = ({ result, index }) => {
     </div>
   );
 };
+

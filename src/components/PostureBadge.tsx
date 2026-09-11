@@ -60,8 +60,8 @@ export const PostureBadge: React.FC<Props> = ({ posture, rank, alternativeRelati
       );
     case "MENTIONED":
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-800/80 text-slate-300 border border-slate-700 shadow-sm">
-          <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-zinc-800/80 text-zinc-300 border border-zinc-700 shadow-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
           Mentioned
         </span>
       );
