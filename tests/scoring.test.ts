@@ -140,6 +140,38 @@ describe("Audited Scoring Methodology & Posture Verification", () => {
       expect(score.benchmarkIndex?.score).toBe(85);
     });
 
+    it("guarantees that a TOP_RECOMMENDATION on an ALTERNATIVES query cannot inflate the prospective recommendation score", () => {
+      // 4 prospective questions: all NOT_MENTIONED (score = 0)
+      const prospectiveZero = [
+        mockQuestion("CATEGORY_DISCOVERY", "NOT_MENTIONED"),
+        mockQuestion("BEST_OF", "NOT_MENTIONED"),
+        mockQuestion("USE_CASE", "NOT_MENTIONED"),
+        mockQuestion("FEATURE_SPECIFIC", "NOT_MENTIONED"),
+      ];
+      const scoreBefore = calculateVisibilityScore(prospectiveZero);
+      expect(scoreBefore.overallScore).toBe(0);
+      expect(scoreBefore.topRecommendationRate).toBe(0);
+      expect(scoreBefore.recommendationRate).toBe(0);
+
+      // Add an ALTERNATIVES question with TOP_RECOMMENDATION
+      const withAlternatives = [
+        ...prospectiveZero,
+        mockQuestion("ALTERNATIVES", "TOP_RECOMMENDATION", "DEFENDED"),
+      ];
+      const scoreAfter = calculateVisibilityScore(withAlternatives);
+
+      // Core prospective score MUST strictly remain 0
+      expect(scoreAfter.overallScore).toBe(0);
+      expect(scoreAfter.topRecommendationRate).toBe(0);
+      expect(scoreAfter.recommendationRate).toBe(0);
+      expect(scoreAfter.considerationRate).toBe(0);
+      expect(scoreAfter.prospectiveQuestionsEvaluated).toBe(4);
+
+      // But benchmark index reflects the alternative defense
+      expect(scoreAfter.benchmarkIndex?.status).toBe("ESTABLISHED_BENCHMARK");
+      expect(scoreAfter.benchmarkIndex?.score).toBe(100);
+    });
+
     it("computes Benchmark Index correctly for DEFENDED, DISPLACED, and UNRECOGNIZED alternative outcomes", () => {
       // Defended outcome
       const defendedScore = calculateVisibilityScore([

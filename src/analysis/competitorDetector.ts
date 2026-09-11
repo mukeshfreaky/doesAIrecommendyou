@@ -29,7 +29,7 @@ const EXCLUDED_ENTITIES = new Set([
 export function detectCompetitors(
   aiResponses: Array<{ text: string; citations?: string[] }>,
   targetBrand: string,
-  targetDomain: string
+  targetDomain?: string
 ): CompetitorMention[] {
   const competitorMap = new Map<
     string,
@@ -42,11 +42,26 @@ export function detectCompetitors(
     }
   >();
 
-  const targetBrandNorm = targetBrand.toLowerCase().trim();
-  const targetDomainNorm = targetDomain.toLowerCase().replace(/^www\./, "").trim();
+  const targetBrandNorm = (targetBrand || "").toLowerCase().trim();
+  const targetDomainNorm = (targetDomain || "").toLowerCase().replace(/^www\./, "").trim();
 
   for (const { text, citations = [] } of aiResponses) {
-    const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+    if (!text || typeof text !== "string") continue;
+
+    let textToScan = text;
+    // Check if text is JSON and extract recommendationReason
+    if (text.trim().startsWith("{")) {
+      try {
+        const parsed = JSON.parse(text.trim());
+        if (typeof parsed.recommendationReason === "string") {
+          textToScan = `${parsed.recommendationReason}\n${text}`;
+        }
+      } catch {
+        // Not JSON, continue scanning text directly
+      }
+    }
+
+    const lines = textToScan.split(/\n+/).map((l) => l.trim()).filter(Boolean);
     let listRank = 0;
 
     for (const line of lines) {
