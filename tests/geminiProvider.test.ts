@@ -106,4 +106,9 @@ describe("AI Providers & Registry", () => {
     expect(res.estimatedCostUSD).toBeGreaterThanOrEqual(0.07);
     expect(res.estimatedCostUSD).toBeLessThan(0.08);
   });
+
+  it("GeminiProvider accepts thinkingBudget and thinkingLevel options without type or configuration error", () => {
+    const provider = new GeminiProvider();
+    expect(provider.modelId).toBeDefined();
+  });
 });

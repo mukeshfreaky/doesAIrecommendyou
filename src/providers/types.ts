@@ -11,6 +11,8 @@ export interface ProviderOptions {
   enableSearchGrounding?: boolean;
   maxOutputTokens?: number;
   responseMimeType?: string;
+  thinkingBudget?: number;
+  thinkingLevel?: "THINKING_LEVEL_UNSPECIFIED" | "MINIMAL" | "LOW" | "MEDIUM" | "HIGH";
 }
 
 export interface RawGroundingChunk {

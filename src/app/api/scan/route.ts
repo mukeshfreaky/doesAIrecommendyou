@@ -203,9 +203,10 @@ ${delimitedEvidence}`;
           SYSTEM_EVIDENCE_EVALUATOR_INSTRUCTION,
           {
             enableSearchGrounding: false,
-            maxOutputTokens: 1200,
+            maxOutputTokens: 400,
             temperature: 0.1,
             responseMimeType: "application/json",
+            thinkingLevel: "MINIMAL",
           }
         );
       } catch (err: any) {

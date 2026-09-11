@@ -10,7 +10,7 @@ export class GeminiProvider implements AIProvider {
   private client: GoogleGenAI | null = null;
 
   constructor(modelId?: string) {
-    this.modelId = modelId || process.env.GEMINI_MODEL || "gemini-3-flash-preview";
+    this.modelId = modelId || process.env.GEMINI_MODEL || "gemini-3.6-flash";
     const apiKey = process.env.GEMINI_API_KEY;
     if (apiKey && apiKey.trim().length > 0) {
       this.client = new GoogleGenAI({ apiKey });
@@ -54,6 +54,16 @@ export class GeminiProvider implements AIProvider {
     }
     if (options?.responseMimeType) {
       config.responseMimeType = options.responseMimeType;
+    }
+    if (options?.thinkingBudget !== undefined || options?.thinkingLevel !== undefined) {
+      const thinkingConfig: Record<string, unknown> = {};
+      if (options.thinkingBudget !== undefined) {
+        thinkingConfig.thinkingBudget = options.thinkingBudget;
+      }
+      if (options.thinkingLevel !== undefined) {
+        thinkingConfig.thinkingLevel = options.thinkingLevel;
+      }
+      config.thinkingConfig = thinkingConfig;
     }
     if (enableSearch) {
       config.tools = [{ googleSearch: {} }];

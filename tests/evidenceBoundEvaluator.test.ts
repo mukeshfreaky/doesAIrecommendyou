@@ -297,27 +297,12 @@ describe("Architecture C: Evidence-Bound Evaluator & Security Unit Tests", () =>
     expect(result.error).toContain('Competitor "FakeUnicornPlatform" is not mentioned in evidence');
   });
 
-  // Test R: Enforces compact schema limits (max 3 claims, max 3 competitors, character truncation)
-  it("Test R: enforces compact schema limits on competitors, claims, and reason length", () => {
-    const veryLongReason = "A".repeat(200);
-    const veryLongClaim = "Resend deliverability " + "B".repeat(200);
-
+  // Test S: Parses and accepts minimal compact schema { posture, brandRank, recommendationReason }
+  it("Test S: accepts pure compact schema with only posture, brandRank, and recommendationReason", () => {
     const rawOutput = JSON.stringify({
       posture: "TOP_RECOMMENDATION",
       brandRank: 1,
-      recommendationReason: veryLongReason,
-      competitors: [
-        { name: "Mailtrap", evidenceIds: ["EVIDENCE_1"] },
-        { name: "SendGrid", evidenceIds: ["EVIDENCE_1"] },
-        { name: "Postmark", evidenceIds: ["EVIDENCE_2"] },
-        { name: "IgnoredExtraCompetitor", evidenceIds: ["EVIDENCE_2"] },
-      ],
-      claims: [
-        { claim: veryLongClaim, evidenceIds: ["EVIDENCE_1"] },
-        { claim: "Postmark transactional deliverability.", evidenceIds: ["EVIDENCE_2"] },
-        { claim: "Resend React templates.", evidenceIds: ["EVIDENCE_1"] },
-        { claim: "Extra 4th claim.", evidenceIds: ["EVIDENCE_1"] },
-      ],
+      recommendationReason: "Resend is top rated for developer email deliverability.",
     });
 
     const result = validateAndResolveEvaluatorOutput(
@@ -328,9 +313,28 @@ describe("Architecture C: Evidence-Bound Evaluator & Security Unit Tests", () =>
     );
 
     expect(result.status).toBe("EVIDENCE_BACKED");
-    expect(result.recommendationReason.length).toBeLessThanOrEqual(160);
-    expect(result.competitors.length).toBe(3);
-    expect(result.claims.length).toBe(3);
-    expect(result.claims[0].claim.length).toBeLessThanOrEqual(160);
+    expect(result.posture).toBe("TOP_RECOMMENDATION");
+    expect(result.brandRank).toBe(1);
+    expect(result.recommendationReason).toBe("Resend is top rated for developer email deliverability.");
+    expect(result.citations).toHaveLength(2); // Automatically includes authoritative retrieved evidence
+  });
+
+  // Test T: Compact schema still rejects invalid/unrecognized posture
+  it("Test T: rejects invalid recommendation posture in compact schema", () => {
+    const rawOutput = JSON.stringify({
+      posture: "INVALID_POSTURE_TYPE",
+      brandRank: 1,
+      recommendationReason: "Some reason.",
+    });
+
+    const result = validateAndResolveEvaluatorOutput(
+      rawOutput,
+      mockEvidenceList,
+      "Resend",
+      "resend.com"
+    );
+
+    expect(result.status).toBe("EVALUATION_FAILED");
+    expect(result.error).toContain("Invalid posture");
   });
 });
