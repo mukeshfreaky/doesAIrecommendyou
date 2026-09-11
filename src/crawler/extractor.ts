@@ -1,4 +1,4 @@
-import { BusinessProfile, CrawledPage } from "@/types";
+import { BusinessArchetype, BusinessProfile, CrawledPage } from "@/types";
 
 // Verified persona nouns for target audience extraction
 const VALID_PERSONAS = [
@@ -10,12 +10,18 @@ const VALID_PERSONAS = [
   "devops teams",
   "site reliability engineers",
   "product managers",
+  "product teams",
   "marketers",
   "sales teams",
   "finance teams",
   "merchants",
   "retailers",
   "e-commerce brands",
+  "travelers",
+  "guests",
+  "hosts",
+  "consumers",
+  "shoppers",
   "startups",
   "enterprises",
   "founders",
@@ -24,46 +30,112 @@ const VALID_PERSONAS = [
   "businesses",
 ];
 
-// Curated canonical category patterns derived strictly from explicit website evidence
-const CANONICAL_CATEGORY_RULES: Array<{
+export interface CategoryRule {
   pattern: RegExp;
   category: string;
-}> = [
+  archetype: BusinessArchetype;
+}
+
+// Curated canonical category patterns across diverse commercial business archetypes
+export const CANONICAL_CATEGORY_RULES: CategoryRule[] = [
+  // 1. Developer / API Infrastructure
   {
-    pattern: /\b(?:email\s+(?:api|for\s+developers|delivery|infrastructure)|transactional\s+email|send\s+emails)\b/i,
+    pattern: /\b(?:email\s+(?:api|for\s+developers|delivery|infrastructure)|transactional\s+email|send\s+emails|email\s+delivery)\b/i,
     category: "Email Delivery & Transactional Email API",
+    archetype: "DEVELOPER_TOOL",
   },
   {
     pattern: /\b(?:payment\s+processing|payments?\s+infrastructure|accept\s+payments|payment\s+gateway)\b/i,
     category: "Payment Processing & Financial Infrastructure",
-  },
-  {
-    pattern: /\b(?:e-?commerce\s+platform|online\s+store\s+builder|commerce\s+platform|shopping\s+cart)\b/i,
-    category: "E-commerce Platform & Online Storefronts",
-  },
-  {
-    pattern: /\b(?:observability|distributed\s+tracing|application\s+monitoring|apm|metrics\s+and\s+logs)\b/i,
-    category: "Observability & Application Monitoring Platform",
-  },
-  {
-    pattern: /\b(?:crm|customer\s+relationship\s+management|sales\s+crm)\b/i,
-    category: "CRM & Customer Relationship Management",
-  },
-  {
-    pattern: /\b(?:cloud\s+database|serverless\s+database|sql\s+database|nosql\s+database)\b/i,
-    category: "Cloud Database & Backend Infrastructure",
+    archetype: "DEVELOPER_TOOL",
   },
   {
     pattern: /\b(?:authentication|identity\s+and\s+access|auth\s+for\s+developers|user\s+management)\b/i,
     category: "Authentication & Identity Infrastructure",
+    archetype: "DEVELOPER_TOOL",
   },
   {
-    pattern: /\b(?:project\s+management|issue\s+tracking|task\s+management|sprint\s+planning)\b/i,
+    pattern: /\b(?:cloud\s+database|serverless\s+database|sql\s+database|nosql\s+database)\b/i,
+    category: "Cloud Database & Backend Infrastructure",
+    archetype: "DEVELOPER_TOOL",
+  },
+  {
+    pattern: /\b(?:observability|distributed\s+tracing|application\s+monitoring|apm|metrics\s+and\s+logs)\b/i,
+    category: "Observability & Application Monitoring",
+    archetype: "DEVELOPER_TOOL",
+  },
+
+  // 2. Travel & Hospitality
+  {
+    pattern: /\b(?:vacation\s+rentals?|cabins?|beach\s+houses?|unique\s+stays|homestays?|short-?term\s+rentals?|hotel\s+booking|flight\s+booking|accommodations?|lodging|places\s+to\s+stay|vacation\s+homes?)\b/i,
+    category: "Vacation Rentals & Travel Accommodations",
+    archetype: "TRAVEL_HOSPITALITY",
+  },
+
+  // 3. E-Commerce / Consumer Products
+  {
+    pattern: /\b(?:sustainable\s+shoes|sustainable\s+footwear|comfortable\s+shoes|running\s+shoes|sneakers?|everyday\s+shoes|apparel\s+and\s+shoes|footwear\s+and\s+clothing|wool\s+runners?|sustainable\s+apparel)\b/i,
+    category: "Sustainable Footwear & Apparel",
+    archetype: "ECOMMERCE_CONSUMER",
+  },
+  {
+    pattern: /\b(?:shoes?|footwear|sneakers?|boots?|sandals?)\b/i,
+    category: "Footwear & Shoes",
+    archetype: "ECOMMERCE_CONSUMER",
+  },
+  {
+    pattern: /\b(?:apparel|clothing|activewear|swimwear|fashion\s+brand|menswear|womenswear)\b/i,
+    category: "Apparel & Clothing",
+    archetype: "ECOMMERCE_CONSUMER",
+  },
+  {
+    pattern: /\b(?:skincare|cosmetics|beauty\s+products|grooming|personal\s+care)\b/i,
+    category: "Skincare & Beauty Products",
+    archetype: "ECOMMERCE_CONSUMER",
+  },
+  {
+    pattern: /\b(?:e-?commerce\s+platform|online\s+store\s+builder|commerce\s+platform|shopping\s+cart)\b/i,
+    category: "E-commerce Platform & Online Storefronts",
+    archetype: "B2B_SAAS",
+  },
+
+  // 4. B2B SaaS / Product Tools
+  {
+    pattern: /\b(?:project\s+management|issue\s+tracking|task\s+management|sprint\s+planning|system\s+for\s+product\s+development|product\s+development\s+system|engineering\s+project\s+management)\b/i,
     category: "Project Management & Issue Tracking",
+    archetype: "B2B_SAAS",
+  },
+  {
+    pattern: /\b(?:crm|customer\s+relationship\s+management|sales\s+crm|sales\s+pipeline)\b/i,
+    category: "CRM & Sales Pipeline Management",
+    archetype: "B2B_SAAS",
   },
   {
     pattern: /\b(?:customer\s+support|help\s+desk|customer\s+service\s+software|ticketing\s+system)\b/i,
     category: "Customer Support & Helpdesk Platform",
+    archetype: "B2B_SAAS",
+  },
+  {
+    pattern: /\b(?:analytics\s+platform|business\s+intelligence|dashboarding|product\s+analytics)\b/i,
+    category: "Product Analytics & Business Intelligence",
+    archetype: "B2B_SAAS",
+  },
+
+  // 5. Local Services & Professional Advisory
+  {
+    pattern: /\b(?:plumbing|plumber|hvac|electrician|roofing|landscaping|cleaning\s+services?)\b/i,
+    category: "Home & Commercial Field Services",
+    archetype: "LOCAL_SERVICE",
+  },
+  {
+    pattern: /\b(?:legal\s+services?|accounting\s+firm|tax\s+preparation|consulting\s+firm|marketing\s+agency|design\s+agency)\b/i,
+    category: "Professional & Advisory Services",
+    archetype: "PROFESSIONAL_SERVICES",
+  },
+  {
+    pattern: /\b(?:freelance\s+marketplace|hire\s+freelancers|talent\s+marketplace|gig\s+economy)\b/i,
+    category: "Talent & Freelance Marketplace",
+    archetype: "MARKETPLACE",
   },
 ];
 
@@ -89,7 +161,7 @@ export function extractBusinessProfile(
   const domain = extractDomain(rootUrl || homepage.url);
   const name = extractBrandName(homepage, domain);
   const description = extractDescription(pages);
-  const { canonicalCategory, canonicalCategoryConfidence } = deriveCanonicalCategory(homepage, description);
+  const { canonicalCategory, canonicalCategoryConfidence, archetype } = deriveCanonicalCategory(homepage, description);
   const productsOrServices = extractProducts(pages, canonicalCategory);
   const targetCustomers = extractTargetCustomers(pages);
   const industries = extractIndustries(pages);
@@ -105,6 +177,7 @@ export function extractBusinessProfile(
     domain,
     canonicalCategory,
     canonicalCategoryConfidence,
+    archetype,
     description,
     productsOrServices,
     targetCustomers,
@@ -130,7 +203,7 @@ function extractDomain(urlStr: string): string {
 export function extractBrandName(homepage: CrawledPage, domain: string): string {
   // 1. Try Title before separators (including middle dots, bullets, em dashes, pipes, colons)
   if (homepage.title) {
-    // Split by standard brand-tagline separators: | : - ? ? ? ?
+    // Split by standard brand-tagline separators: | : - · — – • − -
     const parts = homepage.title.split(/[|:\u00b7\u2014\u2013\u2022\u2212\-]/);
     if (parts.length > 0) {
       let candidate = parts[0].trim();
@@ -165,13 +238,17 @@ export function extractBrandName(homepage: CrawledPage, domain: string): string 
 export function deriveCanonicalCategory(
   homepage: CrawledPage,
   description: string
-): { canonicalCategory: string; canonicalCategoryConfidence: "HIGH" | "MEDIUM" | "LOW" } {
-  const combinedEvidence = `${homepage.title} ${homepage.headings.slice(0, 3).join(" ")} ${description}`.toLowerCase();
+): { canonicalCategory: string; canonicalCategoryConfidence: "HIGH" | "MEDIUM" | "LOW"; archetype: BusinessArchetype } {
+  const combinedEvidence = `${homepage.title} ${homepage.headings.slice(0, 4).join(" ")} ${description} ${homepage.text.slice(0, 1000)}`.toLowerCase();
 
   // 1. Check curated high-confidence category rules
   for (const rule of CANONICAL_CATEGORY_RULES) {
     if (rule.pattern.test(combinedEvidence)) {
-      return { canonicalCategory: rule.category, canonicalCategoryConfidence: "HIGH" };
+      return {
+        canonicalCategory: rule.category,
+        canonicalCategoryConfidence: "HIGH",
+        archetype: rule.archetype,
+      };
     }
   }
 
@@ -179,20 +256,57 @@ export function deriveCanonicalCategory(
   if (homepage.title) {
     const parts = homepage.title.split(/[|:\u00b7\u2014\u2013\u2022\u2212\-]/);
     if (parts.length > 1) {
-      const tagline = parts[1].trim().toLowerCase();
+      let tagline = parts[1].trim();
+      // Strip leading/trailing generic words
+      tagline = tagline.replace(/^(?:the|a|an)\s+/i, "").trim();
       if (
         tagline.length > 4 &&
         tagline.length < 50 &&
         !tagline.includes("http") &&
         !/welcome|home|official|homepage|login|sign up/i.test(tagline)
       ) {
-        return { canonicalCategory: tagline, canonicalCategoryConfidence: "MEDIUM" };
+        // Detect archetype from tagline/text
+        let archetype: BusinessArchetype = "B2B_SAAS";
+        if (/hotel|vacation|stay|cabin|travel|rental|booking|lodging/i.test(combinedEvidence)) {
+          archetype = "TRAVEL_HOSPITALITY";
+        } else if (/shoe|footwear|apparel|clothing|shop|store|cart|sneaker|wear/i.test(combinedEvidence)) {
+          archetype = "ECOMMERCE_CONSUMER";
+        } else if (/api|developer|sdk|infrastructure|endpoint|webhook/i.test(combinedEvidence)) {
+          archetype = "DEVELOPER_TOOL";
+        }
+
+        return {
+          canonicalCategory: tagline,
+          canonicalCategoryConfidence: "MEDIUM",
+          archetype,
+        };
       }
     }
   }
 
-  // 3. Safe fallback with LOW confidence (Never invent random industries or categories)
-  return { canonicalCategory: "software platform", canonicalCategoryConfidence: "LOW" };
+  // 3. Infer archetype from general vocabulary
+  if (/hotel|vacation|stay|cabin|travel|rental|booking|lodging/i.test(combinedEvidence)) {
+    return {
+      canonicalCategory: "Vacation Rentals & Accommodations",
+      canonicalCategoryConfidence: "MEDIUM",
+      archetype: "TRAVEL_HOSPITALITY",
+    };
+  }
+
+  if (/shoe|footwear|apparel|clothing|fashion|retail|sneaker|d2c/i.test(combinedEvidence)) {
+    return {
+      canonicalCategory: "Consumer Products & Apparel",
+      canonicalCategoryConfidence: "MEDIUM",
+      archetype: "ECOMMERCE_CONSUMER",
+    };
+  }
+
+  // 4. Safe general fallback
+  return {
+    canonicalCategory: "Commercial Services",
+    canonicalCategoryConfidence: "LOW",
+    archetype: "OTHER",
+  };
 }
 
 function extractDescription(pages: CrawledPage[]): string {

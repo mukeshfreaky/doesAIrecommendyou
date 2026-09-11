@@ -433,5 +433,36 @@ describe("Architecture C: Evidence-Bound Evaluator & Security Unit Tests", () =>
       expect(result.posture).toBe("TOP_RECOMMENDATION");
       expect(result.brandRank).toBe(1);
     });
+
+    it("Case 7: Evaluator hallucinates superlative reason but snippet lacks superlative -> Downgraded to RECOMMENDED and brandRank=null", () => {
+      const neutralEvidence: WebEvidence[] = [
+        {
+          id: "EVIDENCE_1",
+          title: "Vacation Rental Guide",
+          url: "https://travelguides.com/stays",
+          domain: "travelguides.com",
+          snippet: "Airbnb operates an online platform for booking vacation homes, apartments, and unique stays.",
+          retrievedAt: "2026-09-10T12:00:00.000Z",
+        },
+      ];
+
+      const rawOutput = JSON.stringify({
+        posture: "TOP_RECOMMENDATION",
+        brandRank: 1,
+        recommendationReason: "Airbnb is the undisputed #1 best platform in the industry.",
+        supportingEvidenceIds: ["EVIDENCE_1"],
+      });
+
+      const result = validateAndResolveEvaluatorOutput(
+        rawOutput,
+        neutralEvidence,
+        "Airbnb",
+        "airbnb.com"
+      );
+
+      expect(result.status).toBe("EVIDENCE_BACKED");
+      expect(result.posture).toBe("RECOMMENDED"); // Downgraded because evidence snippet had no superlative
+      expect(result.brandRank).toBeNull();
+    });
   });
 });

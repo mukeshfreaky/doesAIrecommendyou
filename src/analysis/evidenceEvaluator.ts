@@ -318,8 +318,9 @@ export function validateAndResolveEvaluatorOutput(
     }
   }
 
-  // B. Check Unranked List / Generic Options:
-  // If evidence merely mentions "options include" or "one of several", reject TOP_RECOMMENDATION / brandRank=1
+  // B. Enforce Strict Evidence-Backed Superlative for TOP_RECOMMENDATION:
+  // TOP_RECOMMENDATION / brandRank=1 requires explicit rank-1 / superlative evidence in the retrieved text itself
+  // (NOT in the model's generated reason).
   if (posture === "TOP_RECOMMENDATION" || brandRank === 1) {
     // Check combined text of cited evidence
     const citedText = validatedSupportingIds
@@ -329,13 +330,20 @@ export function validateAndResolveEvaluatorOutput(
       })
       .join(" ");
 
-    const hasSuperlative = /\b(best|top|#1|winner|leading|first|fastest|highest|gold\s+standard)\b/i.test(
-      citedText + " " + recommendationReason
+    const hasSuperlativeInEvidence = /\b(best|top|#1|winner|leading|gold\s+standard|premier|highest\s+rated|number\s+one)\b/i.test(
+      citedText
     );
 
-    if (!hasSuperlative && UNRANKED_INDICATORS.test(citedText)) {
-      posture = "CONSIDERED";
-      brandRank = null;
+    const isUnrankedList = UNRANKED_INDICATORS.test(citedText);
+
+    if (!hasSuperlativeInEvidence || isUnrankedList) {
+      if (isUnrankedList) {
+        posture = "CONSIDERED";
+        brandRank = null;
+      } else {
+        posture = "RECOMMENDED";
+        brandRank = null;
+      }
     }
   }
 

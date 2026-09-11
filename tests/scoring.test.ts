@@ -135,9 +135,9 @@ describe("Audited Scoring Methodology & Posture Verification", () => {
 
       // ALTERNATIVES question must NOT alter prospective counts, but populates benchmarkIndex
       expect(score.benchmarkIndex).toBeDefined();
-      expect(score.benchmarkIndex?.status).toBe("ESTABLISHED_BENCHMARK");
+      expect(score.benchmarkIndex?.status).toBe("RECOGNIZED_ALTERNATIVE");
       expect(score.benchmarkIndex?.relationship).toBe("BENCHMARK");
-      expect(score.benchmarkIndex?.score).toBe(85);
+      expect(score.benchmarkIndex?.score).toBe(65);
     });
 
     it("guarantees that a TOP_RECOMMENDATION on an ALTERNATIVES query cannot inflate the prospective recommendation score", () => {

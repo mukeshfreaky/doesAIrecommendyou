@@ -296,10 +296,128 @@ describe("Buyer Question Generator & Prompt Injection Defense", () => {
       expect(q5).toBeDefined();
       expect(q5?.question).not.toContain("strongest Integrate");
       expect(q5?.question).not.toContain("strongest Email for developers");
+      expect(q5?.question).not.toContain("Test mode");
       expect(q5?.question).toContain("highest deliverability rates and API reliability");
 
       const validation = validateQuestionQuality(q5!.question, resendProfile);
       expect(validation.valid).toBe(true);
+    });
+  });
+
+  describe("Multi-Industry Archetype Question Generation (Resend, Linear, Allbirds, Airbnb)", () => {
+    it("generates clean, developer-focused questions for Linear (B2B SaaS / Developer Tool)", () => {
+      const linearProfile: BusinessProfile = {
+        name: "Linear",
+        domain: "linear.app",
+        canonicalCategory: "Project Management & Issue Tracking",
+        canonicalCategoryConfidence: "HIGH",
+        archetype: "B2B_SAAS",
+        description: "Linear is a purpose-built tool for planning and building products.",
+        productsOrServices: ["issue tracking", "sprint cycles", "roadmaps"],
+        targetCustomers: ["product teams", "software engineering teams"],
+        industries: ["software"],
+        pricingSignals: ["Free", "Standard $8/mo", "Plus $14/mo"],
+        keyFeatures: ["high speed keyboard-first navigation", "git sync", "automated roadmaps"],
+        useCases: ["software issue tracking", "sprint cycles"],
+        locations: [],
+        differentiators: ["fastest issue tracking workflow"],
+        sourcePages: ["https://linear.app"],
+      };
+
+      const questions = generateBuyerQuestions(linearProfile);
+      expect(questions).toHaveLength(5);
+
+      for (const q of questions) {
+        const val = validateQuestionQuality(q.question, linearProfile);
+        expect(val.valid).toBe(true);
+        expect(q.question).not.toMatch(/\b(platform platform|for for)\b/i);
+      }
+
+      const qCategories = questions.map((q) => q.category);
+      expect(qCategories).toEqual([
+        "CATEGORY_DISCOVERY",
+        "BEST_OF",
+        "ALTERNATIVES",
+        "USE_CASE",
+        "FEATURE_SPECIFIC",
+      ]);
+    });
+
+    it("generates clean, consumer-focused questions for Allbirds without software/API pollution", () => {
+      const allbirdsProfile: BusinessProfile = {
+        name: "Allbirds",
+        domain: "allbirds.com",
+        canonicalCategory: "Sustainable Footwear & Apparel",
+        canonicalCategoryConfidence: "HIGH",
+        archetype: "ECOMMERCE_CONSUMER",
+        description: "Allbirds makes sustainable and comfortable shoes and apparel using natural materials.",
+        productsOrServices: ["sustainable shoes", "running sneakers", "everyday footwear", "merino wool apparel"],
+        targetCustomers: ["consumers", "travelers", "everyday walkers"],
+        industries: ["retail", "fashion"],
+        pricingSignals: ["$110-$145"],
+        keyFeatures: ["merino wool comfort", "sugarcane SweetFoam soles", "machine washable"],
+        useCases: ["daily walking", "travel", "casual wear"],
+        locations: [],
+        differentiators: ["carbon neutral sustainable footwear"],
+        sourcePages: ["https://allbirds.com"],
+      };
+
+      const questions = generateBuyerQuestions(allbirdsProfile);
+      expect(questions).toHaveLength(5);
+
+      for (const q of questions) {
+        const val = validateQuestionQuality(q.question, allbirdsProfile);
+        expect(val.valid).toBe(true);
+
+        // Strict assertions against software/developer pollution
+        const lowerQ = q.question.toLowerCase();
+        expect(lowerQ).not.toContain("api");
+        expect(lowerQ).not.toContain("sdk");
+        expect(lowerQ).not.toContain("software");
+        expect(lowerQ).not.toContain("platform platform");
+        expect(lowerQ).not.toContain("for businesses");
+        expect(lowerQ).not.toContain("uptime");
+        expect(lowerQ).not.toContain("deliverability");
+      }
+    });
+
+    it("generates clean, travel-focused questions for Airbnb without software/API pollution", () => {
+      const airbnbProfile: BusinessProfile = {
+        name: "Airbnb",
+        domain: "airbnb.com",
+        canonicalCategory: "Vacation Rentals & Travel Accommodations",
+        canonicalCategoryConfidence: "HIGH",
+        archetype: "TRAVEL_HOSPITALITY",
+        description: "Find vacation rentals, cabins, beach houses, unique homes and experiences around the world.",
+        productsOrServices: ["vacation rentals", "cabins", "unique stays", "travel accommodations"],
+        targetCustomers: ["travelers", "vacationers", "families"],
+        industries: ["travel", "hospitality"],
+        pricingSignals: ["nightly rates"],
+        keyFeatures: ["worldwide unique stays", "guest reviews", "verified host protection"],
+        useCases: ["family vacations", "weekend getaways", "group travel"],
+        locations: [],
+        differentiators: ["largest global network of unique homestays"],
+        sourcePages: ["https://airbnb.com"],
+      };
+
+      const questions = generateBuyerQuestions(airbnbProfile);
+      expect(questions).toHaveLength(5);
+
+      for (const q of questions) {
+        const val = validateQuestionQuality(q.question, airbnbProfile);
+        expect(val.valid).toBe(true);
+
+        // Strict assertions against software/developer pollution
+        const lowerQ = q.question.toLowerCase();
+        expect(lowerQ).not.toContain("software platform");
+        expect(lowerQ).not.toContain("api");
+        expect(lowerQ).not.toContain("sdk");
+        expect(lowerQ).not.toContain("platform platform");
+        expect(lowerQ).not.toContain("for businesses");
+        expect(lowerQ).not.toContain("uptime");
+        expect(lowerQ).not.toContain("deliverability");
+        expect(lowerQ).not.toMatch(/\b(for for|stay stay)\b/i);
+      }
     });
   });
 });

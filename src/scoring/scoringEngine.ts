@@ -110,42 +110,7 @@ function computeBenchmarkIndex(alternativeResults: QuestionResult[]): BenchmarkI
     };
   }
 
-  // Check relationship signals on the alternative evaluations
-  const hasDefended = alternativeResults.some((r) => r.alternativeRelationship === "DEFENDED");
-  if (hasDefended) {
-    return {
-      status: "ESTABLISHED_BENCHMARK",
-      relationship: "DEFENDED",
-      score: 100,
-      rationale: "Target brand is recognized as the market benchmark and defended over alternatives.",
-    };
-  }
-
-  const hasBenchmark = alternativeResults.some(
-    (r) =>
-      r.alternativeRelationship === "BENCHMARK" ||
-      (r.posture !== "NOT_MENTIONED" && r.alternativeRelationship !== "DISPLACED")
-  );
-  const hasDisplaced = alternativeResults.some((r) => r.alternativeRelationship === "DISPLACED");
-
-  if (hasDisplaced && !hasBenchmark) {
-    return {
-      status: "DISPLACED_INCUMBENT",
-      relationship: "DISPLACED",
-      score: 40,
-      rationale: "Target brand is recognized as an incumbent, but alternatives are actively recommended to replace it.",
-    };
-  }
-
-  if (hasBenchmark) {
-    return {
-      status: "ESTABLISHED_BENCHMARK",
-      relationship: "BENCHMARK",
-      score: 85,
-      rationale: "Target brand is recognized as the industry reference benchmark against which competitors are compared.",
-    };
-  }
-
+  // 1. Check all NOT_MENTIONED
   const allNotMentioned = alternativeResults.every((r) => r.posture === "NOT_MENTIONED");
   if (allNotMentioned) {
     return {
@@ -156,10 +121,63 @@ function computeBenchmarkIndex(alternativeResults: QuestionResult[]): BenchmarkI
     };
   }
 
+  // 2. Check explicit DEFENDED or TOP_RECOMMENDATION on alternative query
+  const hasDefended = alternativeResults.some(
+    (r) => r.alternativeRelationship === "DEFENDED" || r.posture === "TOP_RECOMMENDATION"
+  );
+  if (hasDefended) {
+    return {
+      status: "ESTABLISHED_BENCHMARK",
+      relationship: "DEFENDED",
+      score: 100,
+      rationale: "Target brand is recognized as the market benchmark and defended over alternatives.",
+    };
+  }
+
+  // 3. Check explicit DISPLACED
+  const hasDisplaced = alternativeResults.some((r) => r.alternativeRelationship === "DISPLACED");
+  if (hasDisplaced) {
+    return {
+      status: "DISPLACED_INCUMBENT",
+      relationship: "DISPLACED",
+      score: 40,
+      rationale: "Target brand is recognized as an incumbent, but alternatives are actively recommended to replace it.",
+    };
+  }
+
+  // 4. Data-derived scores by evaluated posture on alternatives query
+  const primaryResult = alternativeResults[0];
+  if (primaryResult.posture === "RECOMMENDED") {
+    return {
+      status: "ESTABLISHED_BENCHMARK",
+      relationship: "BENCHMARK",
+      score: 80,
+      rationale: "Target brand is recognized as a market leader and co-recommended alongside top alternatives.",
+    };
+  }
+
+  if (primaryResult.posture === "CONSIDERED") {
+    return {
+      status: "RECOGNIZED_ALTERNATIVE",
+      relationship: "BENCHMARK",
+      score: 65,
+      rationale: "Target brand is recognized as the comparative reference point in the alternative landscape.",
+    };
+  }
+
+  if (primaryResult.posture === "MENTIONED") {
+    return {
+      status: "RECOGNIZED_ALTERNATIVE",
+      relationship: "BENCHMARK",
+      score: 45,
+      rationale: "Target brand is mentioned as a baseline in alternative comparisons.",
+    };
+  }
+
   return {
     status: "RECOGNIZED_ALTERNATIVE",
     relationship: "BENCHMARK",
-    score: 60,
+    score: 50,
     rationale: "Brand is recognized in the alternative ecosystem.",
   };
 }

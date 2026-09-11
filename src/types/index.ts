@@ -1,4 +1,4 @@
-﻿// Core domain types for Does AI Recommend You? (Architecture C: Dedicated Web Evidence Retrieval)
+// Core domain types for Does AI Recommend You? (Architecture C: Dedicated Web Evidence Retrieval)
 
 export type RecommendationPosture =
   | "TOP_RECOMMENDATION"
@@ -38,11 +38,23 @@ export interface CrawledPage {
   fetchedAt: string;
 }
 
+export type BusinessArchetype =
+  | "B2B_SAAS"
+  | "DEVELOPER_TOOL"
+  | "ECOMMERCE_CONSUMER"
+  | "TRAVEL_HOSPITALITY"
+  | "LOCAL_SERVICE"
+  | "PROFESSIONAL_SERVICES"
+  | "MEDIA_CONTENT"
+  | "MARKETPLACE"
+  | "OTHER";
+
 export interface BusinessProfile {
   name: string;
   domain: string;
   canonicalCategory: string;
   canonicalCategoryConfidence: "HIGH" | "MEDIUM" | "LOW";
+  archetype?: BusinessArchetype;
   description: string;
   productsOrServices: string[];
   targetCustomers: string[];
