@@ -19,11 +19,50 @@ export const ScoreGauge: React.FC<Props> = ({ score }) => {
   } = score;
 
   const getTier = (s: number) => {
-    if (s >= 80) return { label: "Dominant AI Recommendation", color: "text-emerald-400", border: "border-emerald-500/30", bg: "bg-emerald-950/20" };
-    if (s >= 55) return { label: "Strong Recommendation Visibility", color: "text-blue-400", border: "border-blue-500/30", bg: "bg-blue-950/20" };
-    if (s >= 30) return { label: "Moderate Visibility", color: "text-amber-400", border: "border-amber-500/30", bg: "bg-amber-950/20" };
-    if (s > 0) return { label: "Low Visibility", color: "text-orange-400", border: "border-orange-500/30", bg: "bg-orange-950/20" };
-    return { label: "Zero Recommendation Visibility", color: "text-rose-400", border: "border-rose-500/30", bg: "bg-rose-950/20" };
+    if (s >= 80)
+      return {
+        label: "Dominant AI Recommendation",
+        color: "text-emerald-400",
+        border: "border-emerald-500/30",
+        bg: "bg-emerald-950/20",
+        summary:
+          "AI consistently selects your business as a top choice when prospective customers ask for solutions in your category.",
+      };
+    if (s >= 55)
+      return {
+        label: "Strong Recommendation Visibility",
+        color: "text-blue-400",
+        border: "border-blue-500/30",
+        bg: "bg-blue-950/20",
+        summary:
+          "AI actively recommends your business across key buyer scenarios, alongside leading category competitors.",
+      };
+    if (s >= 30)
+      return {
+        label: "Moderate Visibility",
+        color: "text-amber-400",
+        border: "border-amber-500/30",
+        bg: "bg-amber-950/20",
+        summary:
+          "AI considers your business for specific use cases, but primarily recommends established category leaders.",
+      };
+    if (s > 0)
+      return {
+        label: "Low Visibility",
+        color: "text-orange-400",
+        border: "border-orange-500/30",
+        bg: "bg-orange-950/20",
+        summary:
+          "AI rarely surfaces your business as a primary recommendation, favoring category competitors.",
+      };
+    return {
+      label: "Zero Recommendation Visibility",
+      color: "text-slate-300",
+      border: "border-slate-700/80",
+      bg: "bg-slate-900/60",
+      summary:
+        "AI isn't currently surfacing your business as a primary recommendation for these buyer questions. Category competitors were recommended instead.",
+    };
   };
 
   const hasProspectiveEvaluations = prospectiveQuestionsEvaluated > 0;
@@ -75,13 +114,13 @@ export const ScoreGauge: React.FC<Props> = ({ score }) => {
             Diagnostic Answer
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            What does AI think of your business?
+            AI Recommendation Visibility
           </h2>
         </div>
 
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pt-2">
           {/* Primary Score Counter */}
-          <div className="space-y-2">
+          <div className="space-y-2 max-w-xl">
             <div className="flex items-baseline gap-3">
               {hasProspectiveEvaluations ? (
                 <>
@@ -110,23 +149,37 @@ export const ScoreGauge: React.FC<Props> = ({ score }) => {
 
             {/* Plain English Explanation of Score */}
             {hasProspectiveEvaluations && (
-              <p className="text-sm text-slate-300 font-medium pt-1">
-                AI recommended your business in{" "}
-                <span className="text-white font-bold">{recommendedScenarios} of {prospectiveQuestionsEvaluated}</span>{" "}
-                buyer scenarios evaluated.
-                {topScenarios > 0 && (
-                  <span className="text-emerald-400 font-normal block sm:inline sm:ml-1">
-                    (Top choice in {topScenarios} scenario{topScenarios > 1 ? "s" : ""})
-                  </span>
-                )}
-              </p>
+              <div className="space-y-1 pt-1">
+                <p className="text-sm text-slate-300 font-medium">
+                  {overallScore === 0 ? (
+                    <span>
+                      AI recommended competitors across all{" "}
+                      <span className="text-white font-bold">{prospectiveQuestionsEvaluated}</span> buyer scenarios evaluated.
+                    </span>
+                  ) : (
+                    <span>
+                      AI recommended your business in{" "}
+                      <span className="text-white font-bold">{recommendedScenarios} of {prospectiveQuestionsEvaluated}</span>{" "}
+                      buyer scenarios evaluated.
+                      {topScenarios > 0 && (
+                        <span className="text-emerald-400 font-normal block sm:inline sm:ml-1">
+                          (Top choice in {topScenarios} scenario{topScenarios > 1 ? "s" : ""})
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  {tier.summary}
+                </p>
+              </div>
             )}
 
             {isPartialEvaluation && (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-amber-950/60 text-amber-300 border border-amber-800/60 mt-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-amber-950/60 text-amber-300 border border-amber-800/60 mt-2">
                 <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                 <span>
-                  Based on {prospectiveQuestionsEvaluated} of {prospectiveQuestionsTotal} buyer scenarios
+                  Based on {prospectiveQuestionsEvaluated} of {prospectiveQuestionsTotal} buyer scenarios ({prospectiveQuestionsTotal - prospectiveQuestionsEvaluated} question{prospectiveQuestionsTotal - prospectiveQuestionsEvaluated > 1 ? "s" : ""} could not be retrieved; missing questions do not reduce your score).
                 </span>
               </div>
             )}

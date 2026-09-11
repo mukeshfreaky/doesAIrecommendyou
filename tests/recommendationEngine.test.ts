@@ -8,6 +8,7 @@ describe("Prescriptive Recommendation Engine", () => {
     domain: "analyticspro.io",
     canonicalCategory: "Product Analytics & Event Tracking",
     canonicalCategoryConfidence: "HIGH",
+    archetype: "B2B_SAAS",
     description: "Enterprise user analytics platform.",
     productsOrServices: ["User Analytics"],
     targetCustomers: ["Product Managers"],
@@ -48,7 +49,7 @@ describe("Prescriptive Recommendation Engine", () => {
     },
   ];
 
-  it("generates high-priority prescriptions for missing review presence and pricing transparency", () => {
+  it("generates exactly 3 prioritized action items with all 4 required fields", () => {
     const items = generateActionableRecommendations(
       score,
       [] as QuestionResult[],
@@ -57,7 +58,17 @@ describe("Prescriptive Recommendation Engine", () => {
       profileWithoutPricing
     );
 
-    expect(items.length).toBeGreaterThanOrEqual(3);
+    expect(items.length).toBe(3);
+
+    for (const item of items) {
+      expect(item.id).toBeDefined();
+      expect(item.title).toBeTruthy();
+      expect(item.problem).toBeTruthy();
+      expect(item.whyItMatters).toBeTruthy();
+      expect(item.suggestedImprovement).toBeTruthy();
+      expect(item.supportingEvidence).toBeTruthy();
+      expect(item.expectedImpact).toBeTruthy();
+    }
 
     const reviewAction = items.find((i) => i.id === "rec_citations");
     expect(reviewAction).toBeDefined();
@@ -72,7 +83,7 @@ describe("Prescriptive Recommendation Engine", () => {
     expect(competitorAction?.description).toContain("Mixpanel");
   });
 
-  it("does not emit unsupported numerical percentage claims in impact or rationale", () => {
+  it("does not emit unsupported numerical percentage claims in impact, description, or recommendations", () => {
     const items = generateActionableRecommendations(
       score,
       [] as QuestionResult[],
@@ -85,6 +96,10 @@ describe("Prescriptive Recommendation Engine", () => {
       expect(item.expectedImpact).not.toMatch(/\d+%/);
       expect(item.expectedImpact).not.toMatch(/\d+-\d+%/);
       expect(item.description).not.toMatch(/\d+%/);
+      expect(item.problem).not.toMatch(/\d+%/);
+      expect(item.whyItMatters).not.toMatch(/\d+%/);
+      expect(item.suggestedImprovement).not.toMatch(/\d+%/);
     }
   });
 });
+

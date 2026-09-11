@@ -52,7 +52,7 @@ export const CompetitorTable: React.FC<Props> = ({ competitors }) => {
                   {comp.rank ? `#${comp.rank}` : "?"}
                 </td>
                 <td className="py-3.5 pr-2 text-right font-mono text-slate-300">
-                  {comp.frequency} / 5 questions
+                  {comp.frequency} {comp.frequency === 1 ? "scenario" : "scenarios"}
                 </td>
               </tr>
             ))}

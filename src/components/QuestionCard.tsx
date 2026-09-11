@@ -32,12 +32,12 @@ export const QuestionCard: React.FC<Props> = ({ result, index }) => {
                 <Globe className="w-3 h-3" /> Checked against live web evidence
               </span>
             ) : isRetrievalFailed ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded bg-amber-950/60 text-amber-400 border border-amber-800/50">
-                <AlertCircle className="w-3 h-3" /> Live web evidence could not be retrieved for this question.
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800/50">
+                <AlertCircle className="w-3 h-3" /> Search provider error (Inconclusive — not counted against your score)
               </span>
             ) : isEvaluationFailed ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded bg-rose-950/60 text-rose-400 border border-rose-800/50">
-                <AlertCircle className="w-3 h-3" /> Evaluator error
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800/50">
+                <AlertCircle className="w-3 h-3" /> Evaluator error (Inconclusive — not counted against your score)
               </span>
             ) : (
               <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-800/50 text-slate-400">
@@ -49,7 +49,7 @@ export const QuestionCard: React.FC<Props> = ({ result, index }) => {
             "{result.question}"
           </h3>
           <p className="text-xs text-slate-400 mt-1 italic">
-            {result.rationale}
+            Buyer intent tested: {result.rationale}
           </p>
         </div>
 
@@ -64,7 +64,7 @@ export const QuestionCard: React.FC<Props> = ({ result, index }) => {
 
       <div className="mt-3 p-3 rounded-lg bg-slate-950/70 border border-slate-800/80 text-sm text-slate-300">
         <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">
-          AI Posture Evaluation:
+          AI Recommendation Evaluation:
         </span>
         {result.recommendationReason}
       </div>

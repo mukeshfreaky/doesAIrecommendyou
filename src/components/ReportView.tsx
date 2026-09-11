@@ -10,16 +10,19 @@ import { CitationList } from "./CitationList";
 import {
   Share2,
   Check,
-  Cpu,
   Layers,
   ArrowLeft,
   Lightbulb,
-  TrendingUp,
   RefreshCw,
   Bell,
   ChevronDown,
   ChevronUp,
   ShieldCheck,
+  CheckCircle2,
+  TrendingDown,
+  Sparkles,
+  SearchCheck,
+  Compass,
 } from "lucide-react";
 
 interface Props {
@@ -33,9 +36,11 @@ export const ReportView: React.FC<Props> = ({ report, onReset }) => {
   const [notifyModalOpen, setNotifyModalOpen] = useState(false);
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (typeof window !== "undefined") {
+      navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleResetAction = () => {
@@ -45,23 +50,30 @@ export const ReportView: React.FC<Props> = ({ report, onReset }) => {
     }
   };
 
-  // Derive evidence-based explanation
-  const recommendedCount = report.questionResults.filter(
+  // Classify questions into where brand won vs where competitors led
+  const recommendedQuestions = report.questionResults.filter(
     (q) => q.posture === "TOP_RECOMMENDATION" || q.posture === "RECOMMENDED"
-  ).length;
-  const consideredCount = report.questionResults.filter(
-    (q) => q.posture === "CONSIDERED" || q.posture === "MENTIONED"
-  ).length;
-  const missingCount = report.questionResults.filter(
-    (q) => q.posture === "NOT_MENTIONED"
-  ).length;
+  );
+  const losingOrLesserQuestions = report.questionResults.filter(
+    (q) =>
+      q.posture === "NOT_MENTIONED" ||
+      q.posture === "CONSIDERED" ||
+      q.posture === "MENTIONED" ||
+      (q.brandRank && q.brandRank > 1)
+  );
 
-  const isEvidenceBacked = report.providerMetadata.searchGroundingStatus === "EVIDENCE_BACKED" ||
+  const isEvidenceBacked =
+    report.providerMetadata.searchGroundingStatus === "EVIDENCE_BACKED" ||
     report.questionResults.some((q) => q.evidenceStatus === "EVIDENCE_BACKED");
 
+  const totalEvaluated =
+    report.score.prospectiveQuestionsEvaluated ?? report.questionResults.length;
+  const totalQuestions =
+    report.score.prospectiveQuestionsTotal ?? report.questionResults.length;
+
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-10 animate-in fade-in duration-500 pb-16">
-      {/* Top Header */}
+    <div className="w-full max-w-5xl mx-auto space-y-12 animate-in fade-in duration-500 pb-20">
+      {/* Top Header & Context */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
         <div>
           <button
@@ -78,8 +90,15 @@ export const ReportView: React.FC<Props> = ({ report, onReset }) => {
               {report.domain}
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-1.5">
-            Diagnostic evaluated on {new Date(report.generatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} • {isEvidenceBacked ? "We checked live web evidence and asked AI to evaluate what it shows." : "Parametric Evaluation"}
+          <p className="text-xs text-slate-400 mt-1.5 flex items-center gap-1.5">
+            <SearchCheck className="w-3.5 h-3.5 text-blue-400" />
+            Diagnostic snapshot evaluated on{" "}
+            {new Date(report.generatedAt).toLocaleDateString(undefined, {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}{" "}
+            • {isEvidenceBacked ? "Checked against live web evidence" : "Model Parametric Snapshot"}
           </p>
         </div>
 
@@ -94,129 +113,211 @@ export const ReportView: React.FC<Props> = ({ report, onReset }) => {
         </div>
       </div>
 
-      {/* 1. ANSWER FIRST: Score Gauge & Brand Benchmark */}
-      <ScoreGauge score={report.score} />
+      {/* ========================================================================= */}
+      {/* A. ANSWER FIRST: AI Recommendation Visibility Score */}
+      {/* ========================================================================= */}
+      <section>
+        <ScoreGauge score={report.score} />
+      </section>
 
-      {/* 2. EXPLAIN: Why did AI recommend you — or not? */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 md:p-8">
+      {/* ========================================================================= */}
+      {/* B. WHERE AI RECOMMENDS YOU */}
+      {/* ========================================================================= */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              <h2 className="text-xl font-bold text-white tracking-tight">
+                Where AI Recommends You
+              </h2>
+            </div>
+            <p className="text-sm text-slate-400 mt-1">
+              Buyer queries where AI surfaced your business as a primary recommendation.
+            </p>
+          </div>
+          <span className="text-xs font-mono font-medium px-2.5 py-1 rounded-full bg-emerald-950/60 text-emerald-300 border border-emerald-800/60">
+            {recommendedQuestions.length} of {totalEvaluated} Scenarios
+          </span>
+        </div>
+
+        {recommendedQuestions.length > 0 ? (
+          <div className="space-y-3">
+            {recommendedQuestions.map((result, idx) => (
+              <QuestionCard
+                key={result.questionId || idx}
+                result={result}
+                index={report.questionResults.indexOf(result)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-6 text-center space-y-2">
+            <div className="text-sm font-semibold text-slate-300">
+              AI did not surface your business as a primary recommendation in the tested scenarios.
+            </div>
+            <p className="text-xs text-slate-400 max-w-xl mx-auto leading-relaxed">
+              When buyers ask broad category or best-of questions, AI assistants currently prioritize established category incumbents with higher volumes of indexed third-party comparison reviews.
+            </p>
+          </div>
+        )}
+      </section>
+
+      {/* ========================================================================= */}
+      {/* C. WHERE YOU'RE LOSING (Where Competitors Were Recommended Instead) */}
+      {/* ========================================================================= */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <TrendingDown className="w-5 h-5 text-amber-400" />
+              <h2 className="text-xl font-bold text-white tracking-tight">
+                Where Competitors Lead
+              </h2>
+            </div>
+            <p className="text-sm text-slate-400 mt-1">
+              Buyer queries where AI recommended alternative solutions instead.
+            </p>
+          </div>
+          <span className="text-xs font-mono font-medium px-2.5 py-1 rounded-full bg-amber-950/60 text-amber-300 border border-amber-800/60">
+            {losingOrLesserQuestions.length} Scenarios
+          </span>
+        </div>
+
+        {losingOrLesserQuestions.length > 0 ? (
+          <div className="space-y-3">
+            {losingOrLesserQuestions.map((result, idx) => (
+              <QuestionCard
+                key={result.questionId || idx}
+                result={result}
+                index={report.questionResults.indexOf(result)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-6 text-center text-sm text-slate-400">
+            No competitor dominance observed across tested buyer scenarios.
+          </div>
+        )}
+      </section>
+
+      {/* ========================================================================= */}
+      {/* D. COMPETITORS */}
+      {/* ========================================================================= */}
+      <section>
+        <CompetitorTable competitors={report.competitors} />
+      </section>
+
+      {/* ========================================================================= */}
+      {/* E. WHY (Translate Evidence into Business Reasons) */}
+      {/* ========================================================================= */}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 md:p-8 space-y-6">
         <div className="flex items-center gap-2.5 mb-2">
           <Lightbulb className="w-5 h-5 text-amber-400" />
           <h2 className="text-xl font-bold text-white tracking-tight">
-            Why did AI recommend you — or not?
+            Why Did AI Recommend You — or Not?
           </h2>
         </div>
-        <p className="text-sm text-slate-400 mb-5">
-          Observed findings from live web evidence and AI evaluation across realistic commercial search queries.
+        <p className="text-sm text-slate-400">
+          We distinguish verified web evidence from model reasoning and actionable steps.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
-          <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800/80">
-            <span className="text-xs font-semibold text-emerald-400 block mb-1">
-              Strongest Positioning
-            </span>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              {recommendedCount > 0
-                ? `AI actively recommended ${report.businessProfile.name} in ${recommendedCount} buyer scenarios, recognizing developer-first simplicity and modern DX.`
-                : `AI did not rank ${report.businessProfile.name} as a top choice in general category discovery.`}
-            </p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800/80">
-            <span className="text-xs font-semibold text-amber-400 block mb-1">
-              Where Competitors Lead
-            </span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* 1. Observed Evidence */}
+          <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-2">
+            <div className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
+              1. Observed Web Evidence
+            </div>
             <p className="text-xs text-slate-300 leading-relaxed">
               {report.competitors.length > 0
-                ? `Legacy and high-volume enterprise incumbents (${report.competitors.slice(0, 2).map((c) => c.name).join(", ")}) dominate high-scale and enterprise standard queries.`
-                : `No specific competitor dominance was observed across tested queries.`}
+                ? `Live web search indexed extensive third-party review coverage and comparison articles for competitors (${report.competitors.slice(0, 2).map((c) => c.name).join(", ")}).`
+                : "Web search returned general category documentation and vendor websites."}
             </p>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800/80">
-            <span className="text-xs font-semibold text-blue-400 block mb-1">
-              Growth Opportunity
-            </span>
+          {/* 2. AI Inference */}
+          <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-2">
+            <div className="text-xs font-semibold text-purple-400 uppercase tracking-wider">
+              2. AI Evaluator Inference
+            </div>
             <p className="text-xs text-slate-300 leading-relaxed">
-              {missingCount > 0 || consideredCount > 0
-                ? `Publishing explicit enterprise migration guides and direct comparison pages will increase AI recommendation win-rate.`
-                : `Maintain strong documentation and brand sentiment to defend your benchmark position.`}
+              {recommendedQuestions.length > 0
+                ? `AI recognizes ${report.businessProfile.name} in specific use cases, but selects incumbents for general industry standards where independent comparison data is denser.`
+                : `AI currently defaults to market incumbents because they have denser, multi-source corroboration across third-party comparison sites.`}
+            </p>
+          </div>
+
+          {/* 3. Recommended Action */}
+          <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-2">
+            <div className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+              3. Recommended Focus
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Closing third-party review gaps and publishing factual comparison pages vs. top competitors will give AI models clear evidence to recommend your brand.
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* 3. DIAGNOSE: Where does AI recommend you? */}
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">
-            Where does AI recommend you?
-          </h2>
-          <p className="text-sm text-slate-400 mt-1">
-            Buyer scenarios tested against live web evidence.
-          </p>
-        </div>
-
-        <div className="space-y-3">
-          {report.questionResults.map((result, idx) => (
-            <QuestionCard key={result.questionId || idx} result={result} index={idx} />
-          ))}
-        </div>
-      </div>
-
-      {/* 4. BENCHMARK: Competitors Surfaced */}
-      <CompetitorTable
-        competitors={report.competitors}
-      />
-
-      {/* 5. GROUNDING CITATIONS: Real Web Sources */}
+      {/* ========================================================================= */}
+      {/* GROUNDING CITATIONS: Real Web Sources */}
+      {/* ========================================================================= */}
       {report.questionResults.some((q) => q.citedSources && q.citedSources.length > 0) && (
-        <CitationList
-          citations={report.questionResults.flatMap((q) => q.citedSources)}
-        />
+        <section>
+          <CitationList
+            citations={report.questionResults.flatMap((q) => q.citedSources)}
+          />
+        </section>
       )}
 
-      {/* 6. PRESCRIBE: Action Items to Win AI Recommendations */}
-      <PrescriptionList items={report.actionItems} />
+      {/* ========================================================================= */}
+      {/* F. WHAT TO FIX: Exactly 3 Prioritized Actions */}
+      {/* ========================================================================= */}
+      <section>
+        <PrescriptionList items={report.actionItems} />
+      </section>
 
-      {/* 7. RE-CHECK CADENCE & RETENTION HOOK */}
-      <div className="rounded-2xl border border-blue-900/40 bg-gradient-to-br from-blue-950/40 to-indigo-950/20 p-6 md:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+      {/* ========================================================================= */}
+      {/* G. IMPROVEMENT LOOP: Track My AI Visibility */}
+      {/* ========================================================================= */}
+      <section className="rounded-2xl border border-blue-900/50 bg-gradient-to-br from-blue-950/50 via-slate-900/80 to-indigo-950/40 p-6 md:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6 shadow-xl shadow-blue-950/20">
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-blue-400 font-semibold text-sm">
-            <RefreshCw className="w-4 h-4" /> Recommended Re-audit Cadence
+          <div className="flex items-center gap-2 text-blue-400 font-semibold text-xs uppercase tracking-wider">
+            <RefreshCw className="w-4 h-4" /> The Visibility Improvement Loop
           </div>
-          <h3 className="text-lg font-bold text-white">
-            AI rankings change continuously as new web reviews are indexed.
+          <h3 className="text-lg sm:text-xl font-bold text-white">
+            Track your AI visibility & see if changes work
           </h3>
-          <p className="text-xs text-slate-400 max-w-xl">
-            Track whether your search visibility improves after publishing new comparison pages or migration guides.
+          <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
+            Rerun this diagnostic after implementing your 3 action items to measure whether AI assistants begin recommending your business for these buyer questions.
           </p>
         </div>
 
         <div className="shrink-0 flex items-center gap-3">
           <button
             onClick={() => setNotifyModalOpen(true)}
-            className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors flex items-center gap-2 shadow-lg shadow-blue-600/20"
+            className="px-5 py-3 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-all flex items-center gap-2 shadow-lg shadow-blue-600/30 active:scale-95"
           >
-            <Bell className="w-3.5 h-3.5" /> Re-check in 30 Days
+            <Bell className="w-4 h-4" /> Track My AI Visibility
           </button>
         </div>
-      </div>
+      </section>
 
-      {/* Re-check modal simulated notification */}
+      {/* Track Visibility Modal */}
       {notifyModalOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200 shadow-2xl">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-blue-950 border border-blue-800 flex items-center justify-center text-blue-400">
-                <Bell className="w-5 h-5" />
+                <Compass className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-base font-bold text-white">Re-audit Reminder</h4>
-                <p className="text-xs text-slate-400">Bookmark this diagnostic report</p>
+                <h4 className="text-base font-bold text-white">Track AI Recommendation Progress</h4>
+                <p className="text-xs text-slate-400">Measure if your updates improve AI recommendations</p>
               </div>
             </div>
             <p className="text-xs text-slate-300 leading-relaxed">
-              We recommend re-running this scan in 30 days after implementing the recommended comparison pages. Save this report URL to track your benchmark score progress over time.
+              Bookmark this diagnostic URL. After updating your website, pricing, and comparison pages, rerun this scan to verify if AI assistants begin recommending your business.
             </p>
             <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between">
               <span className="text-xs font-mono text-slate-400 truncate max-w-[260px]">
@@ -224,15 +325,15 @@ export const ReportView: React.FC<Props> = ({ report, onReset }) => {
               </span>
               <button
                 onClick={handleCopyLink}
-                className="text-xs text-blue-400 hover:underline shrink-0"
+                className="text-xs text-blue-400 hover:underline shrink-0 font-medium ml-2"
               >
                 {copied ? "Copied!" : "Copy"}
               </button>
             </div>
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2 pt-2">
               <button
                 onClick={() => setNotifyModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200"
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors"
               >
                 Close
               </button>
@@ -241,7 +342,7 @@ export const ReportView: React.FC<Props> = ({ report, onReset }) => {
         </div>
       )}
 
-      {/* 8. Progressive Disclosure: Crawl & Telemetry */}
+      {/* Progressive Disclosure: Technical Telemetry & Crawl Provenance */}
       <div className="border border-slate-800/80 rounded-2xl bg-slate-950/40 overflow-hidden">
         <button
           onClick={() => setTechDetailsOpen(!techDetailsOpen)}
@@ -286,7 +387,9 @@ export const ReportView: React.FC<Props> = ({ report, onReset }) => {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <span className="text-slate-500 font-medium">Retrieval Provider:</span>{" "}
-                  <span className="font-mono text-slate-300">{report.providerMetadata.retrievalProvider || "Tavily Search API"}</span>
+                  <span className="font-mono text-slate-300">
+                    {report.providerMetadata.retrievalProvider || "Tavily Search API"}
+                  </span>
                 </div>
                 <div>
                   <span className="text-slate-500 font-medium">Evaluator Model:</span>{" "}
@@ -294,7 +397,13 @@ export const ReportView: React.FC<Props> = ({ report, onReset }) => {
                 </div>
                 <div>
                   <span className="text-slate-500 font-medium">Evidence Status:</span>{" "}
-                  <span className={isEvidenceBacked ? "text-emerald-400 font-semibold" : "text-amber-400 font-semibold"}>
+                  <span
+                    className={
+                      isEvidenceBacked
+                        ? "text-emerald-400 font-semibold"
+                        : "text-amber-400 font-semibold"
+                    }
+                  >
                     {report.providerMetadata.searchGroundingStatus}
                   </span>
                 </div>
@@ -312,7 +421,8 @@ export const ReportView: React.FC<Props> = ({ report, onReset }) => {
                 </div>
                 <div>
                   <span className="text-slate-500 font-medium">Tokens:</span>{" "}
-                  {report.providerMetadata.inputTokens || 0} in / {report.providerMetadata.outputTokens || 0} out
+                  {report.providerMetadata.inputTokens || 0} in /{" "}
+                  {report.providerMetadata.outputTokens || 0} out
                 </div>
                 <div>
                   <span className="text-slate-500 font-medium">Estimated Cost:</span>{" "}

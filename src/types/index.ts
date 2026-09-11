@@ -177,8 +177,12 @@ export interface ActionItem {
   priority: "HIGH" | "MEDIUM" | "LOW";
   title: string;
   description: string;
+  problem: string;
+  whyItMatters: string;
+  suggestedImprovement: string;
+  supportingEvidence: string;
   expectedImpact: string;
-  rationale: string;
+  rationale?: string;
 }
 
 export type ProviderGroundingStatus =
